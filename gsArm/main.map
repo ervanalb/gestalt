@@ -5,13 +5,36 @@ Archive member included because of file (symbol)
 /usr/bin/../lib/gcc/arm-none-eabi/4.9.3/armv6-m/libgcc.a(_dvmd_tls.o)
                               /usr/bin/../lib/gcc/arm-none-eabi/4.9.3/armv6-m/libgcc.a(_udivsi3.o) (__aeabi_idiv0)
 
+Allocating common symbols
+Common symbol       size              file
+
+gsNode_packet       0x102             lib/gsNode/src/gsnode.o
+
 Discarded input sections
 
+ .text          0x0000000000000000        0x0 src/hal.o
+ .data          0x0000000000000000        0x0 src/hal.o
+ .bss           0x0000000000000000        0x0 src/hal.o
+ .text.gsNode_hal_writeByte
+                0x0000000000000000       0x14 src/hal.o
+ .text.gsNode_hal_flushOutput
+                0x0000000000000000        0x8 src/hal.o
+ .text.gsNode_hal_readByte
+                0x0000000000000000        0x8 src/hal.o
+ .text.gsNode_hal_setTimer
+                0x0000000000000000        0x8 src/hal.o
  .text          0x0000000000000000        0x0 src/main.o
  .data          0x0000000000000000        0x0 src/main.o
  .bss           0x0000000000000000        0x0 src/main.o
+ .rodata        0x0000000000000000       0x2c src/main.o
+ .data.gsNode_url
+                0x0000000000000000        0x4 src/main.o
+ .text.gsNode_packetReceived
+                0x0000000000000000        0x8 src/main.o
  .text.assert_failed
                 0x0000000000000000        0xc src/main.o
+ .text.gsNode_error
+                0x0000000000000000       0x10 src/main.o
  .text          0x0000000000000000        0x0 src/system_stm32f0xx.o
  .data          0x0000000000000000        0x0 src/system_stm32f0xx.o
  .bss           0x0000000000000000        0x0 src/system_stm32f0xx.o
@@ -1450,6 +1473,23 @@ Discarded input sections
  .debug_frame   0x0000000000000000      0x104 lib/STM32F0xx_StdPeriph_Driver/src/stm32f0xx_wwdg.o
  .ARM.attributes
                 0x0000000000000000       0x31 lib/STM32F0xx_StdPeriph_Driver/src/stm32f0xx_wwdg.o
+ .text          0x0000000000000000        0x0 lib/gsNode/src/gsnode.o
+ .data          0x0000000000000000        0x0 lib/gsNode/src/gsnode.o
+ .bss           0x0000000000000000        0x0 lib/gsNode/src/gsnode.o
+ .bss.state     0x0000000000000000        0x1 lib/gsNode/src/gsnode.o
+ .bss.byte_index
+                0x0000000000000000        0x1 lib/gsNode/src/gsnode.o
+ .text.gsNode_transmitPacket
+                0x0000000000000000        0x8 lib/gsNode/src/gsnode.o
+ .text.gsNode_hal_byteWritten
+                0x0000000000000000        0x8 lib/gsNode/src/gsnode.o
+ .text.gsNode_hal_outputFlushed
+                0x0000000000000000        0x8 lib/gsNode/src/gsnode.o
+ .text.gsNode_hal_byteRead
+                0x0000000000000000       0x14 lib/gsNode/src/gsnode.o
+ .text.gsNode_hal_timerFired
+                0x0000000000000000        0x8 lib/gsNode/src/gsnode.o
+ COMMON         0x0000000000000000      0x102 lib/gsNode/src/gsnode.o
  .text          0x0000000000000000       0x14 src/startup.o
  .data          0x0000000000000000        0x0 src/startup.o
  .bss           0x0000000000000000        0x0 src/startup.o
@@ -1474,6 +1514,7 @@ RAM              0x0000000020000000 0x0000000000001000 xrw
 
 Linker script and memory map
 
+LOAD src/hal.o
 LOAD src/main.o
 LOAD src/system_stm32f0xx.o
 LOAD lib/STM32F0xx_StdPeriph_Driver/src/stm32f0xx_adc.o
@@ -1499,6 +1540,7 @@ LOAD lib/STM32F0xx_StdPeriph_Driver/src/stm32f0xx_syscfg.o
 LOAD lib/STM32F0xx_StdPeriph_Driver/src/stm32f0xx_tim.o
 LOAD lib/STM32F0xx_StdPeriph_Driver/src/stm32f0xx_usart.o
 LOAD lib/STM32F0xx_StdPeriph_Driver/src/stm32f0xx_wwdg.o
+LOAD lib/gsNode/src/gsnode.o
 LOAD src/startup.o
 START GROUP
 LOAD /usr/bin/../lib/gcc/arm-none-eabi/4.9.3/armv6-m/libgcc.a
@@ -1513,79 +1555,85 @@ END GROUP
                 0x0000000008000000                g_pfnVectors
                 0x00000000080000c4                . = ALIGN (0x4)
 
-.text           0x00000000080000c4      0x174
+.text           0x00000000080000c4      0x18c
                 0x00000000080000c4                . = ALIGN (0x4)
  *(.text)
  *(.text*)
- .text.main     0x00000000080000c4        0x8 src/main.o
-                0x00000000080000c4                main
+ .text.hal_init
+                0x00000000080000c4        0x8 src/hal.o
+                0x00000000080000c4                hal_init
+ .text.main     0x00000000080000cc       0x10 src/main.o
+                0x00000000080000cc                main
  .text.HardFault_Handler
-                0x00000000080000cc        0x8 src/main.o
-                0x00000000080000cc                HardFault_Handler
+                0x00000000080000dc        0x8 src/main.o
+                0x00000000080000dc                HardFault_Handler
  .text.SystemInit
-                0x00000000080000d4       0x8c src/system_stm32f0xx.o
-                0x00000000080000d4                SystemInit
+                0x00000000080000e4       0x8c src/system_stm32f0xx.o
+                0x00000000080000e4                SystemInit
  .text.SetSysClock
-                0x0000000008000160       0x88 src/system_stm32f0xx.o
+                0x0000000008000170       0x88 src/system_stm32f0xx.o
+ .text.gsNode_init
+                0x00000000080001f8        0x8 lib/gsNode/src/gsnode.o
+                0x00000000080001f8                gsNode_init
  .text.Reset_Handler
-                0x00000000080001e8       0x4c src/startup.o
-                0x00000000080001e8                Reset_Handler
+                0x0000000008000200       0x4c src/startup.o
+                0x0000000008000200                Reset_Handler
  .text.Default_Handler
-                0x0000000008000234        0x2 src/startup.o
-                0x0000000008000234                TIM1_CC_IRQHandler
-                0x0000000008000234                SysTick_Handler
-                0x0000000008000234                PendSV_Handler
-                0x0000000008000234                NMI_Handler
-                0x0000000008000234                I2C1_IRQHandler
-                0x0000000008000234                SPI1_IRQHandler
-                0x0000000008000234                EXTI2_3_IRQHandler
-                0x0000000008000234                ADC1_IRQHandler
-                0x0000000008000234                I2C2_IRQHandler
-                0x0000000008000234                TIM17_IRQHandler
-                0x0000000008000234                RTC_IRQHandler
-                0x0000000008000234                TIM16_IRQHandler
-                0x0000000008000234                TIM3_IRQHandler
-                0x0000000008000234                EXTI4_15_IRQHandler
-                0x0000000008000234                RCC_IRQHandler
-                0x0000000008000234                DMA1_Channel1_IRQHandler
-                0x0000000008000234                Default_Handler
-                0x0000000008000234                TIM14_IRQHandler
-                0x0000000008000234                DMA1_Channel4_5_IRQHandler
-                0x0000000008000234                TIM15_IRQHandler
-                0x0000000008000234                EXTI0_1_IRQHandler
-                0x0000000008000234                SPI2_IRQHandler
-                0x0000000008000234                SVC_Handler
-                0x0000000008000234                WWDG_IRQHandler
-                0x0000000008000234                DMA1_Channel2_3_IRQHandler
-                0x0000000008000234                USART2_IRQHandler
-                0x0000000008000234                FLASH_IRQHandler
-                0x0000000008000234                USART1_IRQHandler
-                0x0000000008000234                TIM1_BRK_UP_TRG_COM_IRQHandler
+                0x000000000800024c        0x2 src/startup.o
+                0x000000000800024c                TIM1_CC_IRQHandler
+                0x000000000800024c                SysTick_Handler
+                0x000000000800024c                PendSV_Handler
+                0x000000000800024c                NMI_Handler
+                0x000000000800024c                I2C1_IRQHandler
+                0x000000000800024c                SPI1_IRQHandler
+                0x000000000800024c                EXTI2_3_IRQHandler
+                0x000000000800024c                ADC1_IRQHandler
+                0x000000000800024c                I2C2_IRQHandler
+                0x000000000800024c                TIM17_IRQHandler
+                0x000000000800024c                RTC_IRQHandler
+                0x000000000800024c                TIM16_IRQHandler
+                0x000000000800024c                TIM3_IRQHandler
+                0x000000000800024c                EXTI4_15_IRQHandler
+                0x000000000800024c                RCC_IRQHandler
+                0x000000000800024c                DMA1_Channel1_IRQHandler
+                0x000000000800024c                Default_Handler
+                0x000000000800024c                TIM14_IRQHandler
+                0x000000000800024c                DMA1_Channel4_5_IRQHandler
+                0x000000000800024c                TIM15_IRQHandler
+                0x000000000800024c                EXTI0_1_IRQHandler
+                0x000000000800024c                SPI2_IRQHandler
+                0x000000000800024c                SVC_Handler
+                0x000000000800024c                WWDG_IRQHandler
+                0x000000000800024c                DMA1_Channel2_3_IRQHandler
+                0x000000000800024c                USART2_IRQHandler
+                0x000000000800024c                FLASH_IRQHandler
+                0x000000000800024c                USART1_IRQHandler
+                0x000000000800024c                TIM1_BRK_UP_TRG_COM_IRQHandler
  *(.rodata)
  *(.rodata*)
-                0x0000000008000238                . = ALIGN (0x4)
- *fill*         0x0000000008000236        0x2 
-                0x0000000008000238                _sidata = .
+                0x0000000008000250                . = ALIGN (0x4)
+ *fill*         0x000000000800024e        0x2 
+                0x0000000008000250                _sidata = .
 
-.glue_7         0x0000000008000238        0x0
+.glue_7         0x0000000008000250        0x0
  .glue_7        0x0000000000000000        0x0 linker stubs
 
-.glue_7t        0x0000000008000238        0x0
+.glue_7t        0x0000000008000250        0x0
  .glue_7t       0x0000000000000000        0x0 linker stubs
 
-.vfp11_veneer   0x0000000008000238        0x0
+.vfp11_veneer   0x0000000008000250        0x0
  .vfp11_veneer  0x0000000000000000        0x0 linker stubs
 
-.v4_bx          0x0000000008000238        0x0
+.v4_bx          0x0000000008000250        0x0
  .v4_bx         0x0000000000000000        0x0 linker stubs
 
-.iplt           0x0000000008000238        0x0
- .iplt          0x0000000000000000        0x0 src/main.o
+.iplt           0x0000000008000250        0x0
+ .iplt          0x0000000000000000        0x0 src/hal.o
 
-.rel.dyn        0x0000000008000238        0x0
- .rel.iplt      0x0000000000000000        0x0 src/main.o
+.rel.dyn        0x0000000008000250        0x0
+ .rel.iplt      0x0000000000000000        0x0 src/hal.o
 
-.data           0x0000000020000000        0x0 load address 0x0000000008000238
+.data           0x0000000020000000        0x0 load address 0x0000000008000250
                 0x0000000020000000                . = ALIGN (0x4)
                 0x0000000020000000                _sdata = .
  *(.data)
@@ -1594,7 +1642,7 @@ END GROUP
                 0x0000000020000000                _edata = .
 
 .igot.plt       0x0000000020000000        0x0
- .igot.plt      0x0000000000000000        0x0 src/main.o
+ .igot.plt      0x0000000000000000        0x0 src/hal.o
 
 .bss            0x0000000020000000        0x0
                 0x0000000020000000                . = ALIGN (0x4)
@@ -1606,48 +1654,72 @@ END GROUP
                 0x0000000020000000                _ebss = .
 OUTPUT(main.elf elf32-littlearm)
 
-.debug_info     0x0000000000000000      0x340
- .debug_info    0x0000000000000000       0x9c src/main.o
- .debug_info    0x000000000000009c      0x2a4 src/system_stm32f0xx.o
+.debug_info     0x0000000000000000      0x6a2
+ .debug_info    0x0000000000000000       0xea src/hal.o
+ .debug_info    0x00000000000000ea      0x142 src/main.o
+ .debug_info    0x000000000000022c      0x2a4 src/system_stm32f0xx.o
+ .debug_info    0x00000000000004d0      0x1d2 lib/gsNode/src/gsnode.o
 
-.debug_abbrev   0x0000000000000000      0x199
- .debug_abbrev  0x0000000000000000       0x93 src/main.o
- .debug_abbrev  0x0000000000000093      0x106 src/system_stm32f0xx.o
+.debug_abbrev   0x0000000000000000      0x34b
+ .debug_abbrev  0x0000000000000000       0x76 src/hal.o
+ .debug_abbrev  0x0000000000000076       0xdd src/main.o
+ .debug_abbrev  0x0000000000000153      0x106 src/system_stm32f0xx.o
+ .debug_abbrev  0x0000000000000259       0xf2 lib/gsNode/src/gsnode.o
 
-.debug_aranges  0x0000000000000000       0x60
+.debug_aranges  0x0000000000000000       0xf8
  .debug_aranges
-                0x0000000000000000       0x30 src/main.o
+                0x0000000000000000       0x40 src/hal.o
  .debug_aranges
-                0x0000000000000030       0x30 src/system_stm32f0xx.o
+                0x0000000000000040       0x40 src/main.o
+ .debug_aranges
+                0x0000000000000080       0x30 src/system_stm32f0xx.o
+ .debug_aranges
+                0x00000000000000b0       0x48 lib/gsNode/src/gsnode.o
 
-.debug_ranges   0x0000000000000000       0x40
- .debug_ranges  0x0000000000000000       0x20 src/main.o
- .debug_ranges  0x0000000000000020       0x20 src/system_stm32f0xx.o
+.debug_ranges   0x0000000000000000       0xb8
+ .debug_ranges  0x0000000000000000       0x30 src/hal.o
+ .debug_ranges  0x0000000000000030       0x30 src/main.o
+ .debug_ranges  0x0000000000000060       0x20 src/system_stm32f0xx.o
+ .debug_ranges  0x0000000000000080       0x38 lib/gsNode/src/gsnode.o
 
-.debug_line     0x0000000000000000      0x19b
- .debug_line    0x0000000000000000       0x63 src/main.o
- .debug_line    0x0000000000000063      0x138 src/system_stm32f0xx.o
+.debug_line     0x0000000000000000      0x3c5
+ .debug_line    0x0000000000000000       0xd6 src/hal.o
+ .debug_line    0x00000000000000d6       0xa6 src/main.o
+ .debug_line    0x000000000000017c      0x138 src/system_stm32f0xx.o
+ .debug_line    0x00000000000002b4      0x111 lib/gsNode/src/gsnode.o
 
-.debug_str      0x0000000000000000      0x25f
- .debug_str     0x0000000000000000       0xf8 src/main.o
-                                         0xfd (size before relaxing)
- .debug_str     0x00000000000000f8      0x167 src/system_stm32f0xx.o
+.debug_str      0x0000000000000000      0x41b
+ .debug_str     0x0000000000000000      0x184 src/hal.o
+                                        0x1c0 (size before relaxing)
+ .debug_str     0x0000000000000184       0x95 src/main.o
+                                        0x1e2 (size before relaxing)
+ .debug_str     0x0000000000000219      0x104 src/system_stm32f0xx.o
                                         0x26f (size before relaxing)
+ .debug_str     0x000000000000031d       0xfe lib/gsNode/src/gsnode.o
+                                        0x269 (size before relaxing)
 
 .comment        0x0000000000000000       0x70
- .comment       0x0000000000000000       0x70 src/main.o
+ .comment       0x0000000000000000       0x70 src/hal.o
                                          0x71 (size before relaxing)
+ .comment       0x0000000000000000       0x71 src/main.o
  .comment       0x0000000000000000       0x71 src/system_stm32f0xx.o
+ .comment       0x0000000000000000       0x71 lib/gsNode/src/gsnode.o
 
 .ARM.attributes
                 0x0000000000000000       0x2f
  .ARM.attributes
-                0x0000000000000000       0x31 src/main.o
+                0x0000000000000000       0x31 src/hal.o
  .ARM.attributes
-                0x0000000000000031       0x31 src/system_stm32f0xx.o
+                0x0000000000000031       0x31 src/main.o
  .ARM.attributes
-                0x0000000000000062       0x21 src/startup.o
+                0x0000000000000062       0x31 src/system_stm32f0xx.o
+ .ARM.attributes
+                0x0000000000000093       0x31 lib/gsNode/src/gsnode.o
+ .ARM.attributes
+                0x00000000000000c4       0x21 src/startup.o
 
-.debug_frame    0x0000000000000000       0xd0
- .debug_frame   0x0000000000000000       0x68 src/main.o
- .debug_frame   0x0000000000000068       0x68 src/system_stm32f0xx.o
+.debug_frame    0x0000000000000000      0x268
+ .debug_frame   0x0000000000000000       0xa0 src/hal.o
+ .debug_frame   0x00000000000000a0       0xa4 src/main.o
+ .debug_frame   0x0000000000000144       0x68 src/system_stm32f0xx.o
+ .debug_frame   0x00000000000001ac       0xbc lib/gsNode/src/gsnode.o
