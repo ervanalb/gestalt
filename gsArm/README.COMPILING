@@ -1,0 +1,22 @@
+First, install the arm-eabi-none toolchain. On Debian-based distributions,
+the incantation goes something like this:
+
+sudo apt-get install gcc-arm-none-eabi gdb-arm-none-eabi
+
+Then, download the STM32F0xx Standard Peripheral Library from ST's website:
+http://www.st.com/web/en/catalog/tools/PF257884
+
+Drop the CMSIS and STM32F0xx_StdPeriph_Driver folders in lib/
+
+Then, simply run "make" to build everything.
+
+If you are using an ST-LINK as a programmer, you should download, build, and
+install texane's ST-LINK software from here:
+https://github.com/texane/stlink
+
+Then, open a spare terminal and type run "make stlink". In your main terminal,
+type "make load". This will launch GDB, load the program onto the target, and
+wait for your input. Type "c" to continue with program execution.
+
+If you are not using a ST-LINK, you may have to modify init.gdb and/or the
+Makefile.

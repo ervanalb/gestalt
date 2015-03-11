@@ -1,0 +1,7 @@
+init.gdb
+*.o
+*.bin
+*.elf
+*.map
+lib/STM32F0xx_StdPeriph_Driver
+lib/CMSIS
