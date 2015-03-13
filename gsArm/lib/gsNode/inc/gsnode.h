@@ -17,6 +17,7 @@ typedef struct {
 
 // Functions provided by the library
 extern gsNode_packet_t gsNode_packet;
+extern uint16_t gsNode_address;
 
 // Error counters
 extern uint16_t gsNode_badPacketCounter;
@@ -28,10 +29,16 @@ void gsNode_transmitPacket();
 
 // Functions that need to be implemented by the application
 
-// Should contain the node's URL
-extern const char* gsNode_url;
-
 // Called when a complete packet is received
 void gsNode_packetReceived();
+
+#define GSNODE_SVC_STATUS               1
+#define GSNODE_SVC_BOOTLOADER_COMMAND   2
+#define GSNODE_SVC_BOOTLOADER_DATA_PORT 3
+#define GSNODE_SVC_BOOTLOADER_READ_PORT 4
+#define GSNODE_SVC_REQUEST_URL          5
+#define GSNODE_SVC_SET_ADDRESS          6
+#define GSNODE_SVC_IDENTIFY_NODE        7
+#define GSNODE_SVC_RESET_NODE           8
 
 #endif

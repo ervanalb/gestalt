@@ -3,14 +3,18 @@
 
 gsNode_packet_t gsNode_packet;
 
-static enum {IDLE, RX, TX} state;
-
-static uint8_t byteIndex;
-static uint8_t crc;
+uint16_t gsNode_address;
 
 uint16_t gsNode_badPacketCounter;
 uint16_t gsNode_timeoutCounter;
 uint16_t gsNode_receiveWhileTransmitCounter;
+
+#define UNICAST   72
+#define MULTICAST 138
+
+static enum {IDLE, RX, TX} state;
+static uint8_t byteIndex;
+static uint8_t crc;
 
 #include "crc.inc" // provides crcTable
 
@@ -134,10 +138,13 @@ void gsNode_hal_byteRead(uint8_t byte)
 
     if(byteIndex > 4 && byteIndex > gsNode_packet.length) // Packet is over
     {
-        if(crc == 0)
+        if(crc == 0 && (gsNode_packet.start == MULTICAST || gsNode_packet.start == UNICAST))
         {
             reset();
-            gsNode_packetReceived();
+            if(gsNode_packet.address == gsNode_address || gsNode_packet.start == MULTICAST)
+            {
+                gsNode_packetReceived();
+            }
         }
         else
         {
