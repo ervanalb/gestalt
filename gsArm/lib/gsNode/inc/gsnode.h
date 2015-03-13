@@ -13,14 +13,15 @@ typedef struct {
     uint8_t port;
     uint8_t length;
     uint8_t payload[GSNODE_PAYLOAD_LENGTH];
-    uint8_t checksum;
 } gsNode_packet_t;
-
-// An error type indicating what went wrong
-typedef enum {GSNODE_ERROR_GENERIC} gsNode_error_t;
 
 // Functions provided by the library
 extern gsNode_packet_t gsNode_packet;
+
+// Error counters
+extern uint16_t gsNode_badPacketCounter;
+extern uint16_t gsNode_timeoutCounter;
+extern uint16_t gsNode_receiveWhileTransmitCounter;
 
 void gsNode_init();
 void gsNode_transmitPacket();
@@ -32,8 +33,5 @@ extern const char* gsNode_url;
 
 // Called when a complete packet is received
 void gsNode_packetReceived();
-
-// Called when an error is encountered
-void gsNode_error(gsNode_error_t error);
 
 #endif

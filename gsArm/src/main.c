@@ -36,8 +36,3 @@ void HardFault_Handler(void)
     for(;;);
 }
 
-// Gestalt error handler
-void gsNode_error(gsNode_error_t error)
-{
-    for(;;);
-}
