@@ -33,6 +33,9 @@ void gsNode_hal_readByte();
 void gsNode_hal_setTimer();
 // once the timer expires, call gsNode_hal_timerFired()
 
+// Cancel the current timer (prevent calling of gsNode_hal_timerFired)
+void gsNode_hal_cancelTimer();
+
 // Callback functions
 // (these functions are defined in the library, but you must call them at the
 // appropriate times for the library to work!)

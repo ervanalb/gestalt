@@ -133,13 +133,13 @@ void gsNode_hal_byteRead(uint8_t byte)
         gsNode_packet.payload[byteIndex - 5] = byte;
     }
 
-    byteIndex++;
     crc = crcTable[crc ^ byte];
 
-    if(byteIndex > 4 && byteIndex > gsNode_packet.length) // Packet is over
+    if(byteIndex > 4 && byteIndex >= gsNode_packet.length) // Packet is over
     {
         if(crc == 0 && (gsNode_packet.start == MULTICAST || gsNode_packet.start == UNICAST))
         {
+            gsNode_hal_cancelTimer();
             reset();
             if(gsNode_packet.address == gsNode_address || gsNode_packet.start == MULTICAST)
             {
@@ -149,12 +149,13 @@ void gsNode_hal_byteRead(uint8_t byte)
         else
         {
             gsNode_badPacketCounter++;
+            gsNode_hal_cancelTimer();
             reset();
         }
     }
-
-    if(state == RX)
+    else
     {
+        byteIndex++;
         gsNode_hal_setTimer();
     }
 

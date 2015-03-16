@@ -1,5 +1,6 @@
 #include "hal.h"
 #include "gsnode.h"
+#include <string.h>
 
 static const char url[] = "http://www.taktia.com/gestalt/nodes/2B1-021";
 
@@ -19,7 +20,8 @@ int main()
 // Service functions to handle incoming standard packets
 static void svcStatus()
 {
-    gsNode_packet.length = 2;
+    gsNode_packet.address = gsNode_address;
+    gsNode_packet.length = 5 + 2;
     gsNode_packet.payload[0] = 'A'; // A for application
     gsNode_packet.payload[1] = 170; // 170 for application good
     gsNode_transmitPacket();
@@ -27,8 +29,9 @@ static void svcStatus()
 
 static void svcRequestURL()
 {
-    gsNode_packet.length = sizeof(url)-1;
-    memcpy(gsNode_packet.payload, url, sizeof(url)-1);
+    gsNode_packet.address = gsNode_address;
+    gsNode_packet.length = sizeof(url) - 1 + 5;
+    memcpy(gsNode_packet.payload, url, sizeof(url) - 1);
     gsNode_transmitPacket();
 }
 
