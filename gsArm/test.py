@@ -26,13 +26,18 @@ def doCrc(msg):
     return crc
 
 s = serial.Serial("/dev/ttyUSB0", 115200)
-msg = [138, 0, 0, 5, 5]
-msg.append(doCrc(msg))
-print msg
-s.write(''.join([chr(c) for c in msg]))
-s.flush()
 
-raw = s.read(49)
+import time
+while True:
+    for msg in [[138, 0, 0, 10, 13, 0, 10, 0, 0, 0, 10, 0, 0], [138, 0, 0, 10, 13, 0, 0, 0, 0, 0, 0, 0, 0]]:
+        msg.append(doCrc(msg))
+        print msg
+        s.write(''.join([chr(c) for c in msg]))
+        s.flush()
+        time.sleep(1)
+
+#raw = s.read(49)
 print repr(raw)
 msg = [ord(c) for c in raw]
 print doCrc(msg)
+

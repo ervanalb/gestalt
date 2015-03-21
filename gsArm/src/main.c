@@ -1,5 +1,6 @@
 #include "hal.h"
 #include "gsnode.h"
+#include "motors.h"
 #include <string.h>
 
 static const char url[] = "http://www.taktia.com/gestalt/nodes/2B1-021";
@@ -41,6 +42,30 @@ static void svcSetAddress()
     svcRequestURL();
 }
 
+#define SVC_SET_XY 10
+
+static void svcSetXY()
+{
+    int32_t x;
+    int32_t y;
+    int32_t z;
+
+    int32_t xv;
+    int32_t yv;
+    int32_t zv;
+
+    memcpy(&x, &gsNode_packet.payload[0], sizeof(x));
+    memcpy(&y, &gsNode_packet.payload[4], sizeof(y));
+    memcpy(&z, &gsNode_packet.payload[8], sizeof(z));
+    memcpy(&x, &gsNode_packet.payload[12], sizeof(xv));
+    memcpy(&y, &gsNode_packet.payload[16], sizeof(yv));
+    memcpy(&z, &gsNode_packet.payload[20], sizeof(zv));
+
+    motor_moveTo(&motor_x, x, xv);
+    motor_moveTo(&motor_y, y, yv);
+    motor_moveTo(&motor_z, z, zv);
+}
+
 // Called when a Gestalt packet arrives
 void gsNode_packetReceived()
 {
@@ -58,6 +83,9 @@ void gsNode_packetReceived()
             svcSetAddress();
             break;
 
+        case SVC_SET_XY:
+            svcSetXY();
+            break;
         // Future
         //case GSNODE_SVC_BOOTLOADER_COMMAND:
         //case GSNODE_SVC_BOOTLOADER_DATA_PORT:
