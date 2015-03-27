@@ -38,11 +38,20 @@ static void svcRequestURL()
 
 static void svcSetAddress()
 {
-    gsNode_address = *(uint16_t*)&gsNode_packet.payload[0];
+    memcpy(&gsNode_address, &gsNode_packet.payload[0], sizeof(gsNode_address));
     svcRequestURL();
 }
 
+static void sendBlankPacket()
+{
+    gsNode_packet.address = gsNode_address;
+    gsNode_packet.length = 5;
+    gsNode_transmitPacket();
+}
+
+
 #define SVC_SET_XY 10
+#define SVC_SET_CURRENT 11
 
 static void svcSetXY()
 {
@@ -50,20 +59,28 @@ static void svcSetXY()
     int32_t y;
     int32_t z;
 
-    int32_t xv;
-    int32_t yv;
-    int32_t zv;
+    int32_t t;
 
     memcpy(&x, &gsNode_packet.payload[0], sizeof(x));
     memcpy(&y, &gsNode_packet.payload[4], sizeof(y));
     memcpy(&z, &gsNode_packet.payload[8], sizeof(z));
-    memcpy(&x, &gsNode_packet.payload[12], sizeof(xv));
-    memcpy(&y, &gsNode_packet.payload[16], sizeof(yv));
-    memcpy(&z, &gsNode_packet.payload[20], sizeof(zv));
+    memcpy(&t, &gsNode_packet.payload[12], sizeof(t));
 
-    motor_moveTo(&motor_x, x, xv);
-    motor_moveTo(&motor_y, y, yv);
-    motor_moveTo(&motor_z, z, zv);
+    motor_moveTo(&motor_x, x, t);
+    motor_moveTo(&motor_y, y, t);
+    motor_moveTo(&motor_z, z, t);
+}
+
+static void svcSetCurrent()
+{
+    uint16_t xyc, zc;
+    memcpy(&xyc, &gsNode_packet.payload[0], sizeof(xyc));
+    memcpy(&zc, &gsNode_packet.payload[4], sizeof(zc));
+
+    hal_setXYCurrent(xyc);
+    hal_setZCurrent(zc);
+
+    sendBlankPacket();
 }
 
 // Called when a Gestalt packet arrives
@@ -85,6 +102,10 @@ void gsNode_packetReceived()
 
         case SVC_SET_XY:
             svcSetXY();
+            break;
+
+        case SVC_SET_CURRENT:
+            svcSetCurrent();
             break;
         // Future
         //case GSNODE_SVC_BOOTLOADER_COMMAND:

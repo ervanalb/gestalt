@@ -4,13 +4,16 @@
 
 #define WATCHDOG_TIMEOUT (48 * GSNODE_TIMER_US)
 
+#define CL_PERIOD 1500 // Control loop runs at 32 KHz
 #define TICK_PERIOD 375 // 128 KHz
 #define CUR_PWM 1500 // 32 KHz
-#define CUR_PWM_PULSE 750 // 32 KHz
 
 static int16_t xp;
 static int16_t yp;
 static int16_t zp;
+
+static volatile uint32_t steps_fwd=0;
+static volatile uint32_t steps_bak=0;
 
 void hal_init()
 {
@@ -52,7 +55,7 @@ void hal_init()
     USART_ClearITPendingBit(USART1, USART_IT_TC);
 
     NVIC_InitStruct.NVIC_IRQChannel = USART1_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 2;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 
@@ -68,9 +71,21 @@ void hal_init()
     TIM_Cmd(TIM14, ENABLE);
 
     NVIC_InitStruct.NVIC_IRQChannel = TIM14_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 2;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 3;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
+
+    // Timebase for sending steps
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM16, ENABLE);
+    TIM_TimeBaseInitStruct.TIM_Period = TICK_PERIOD - 1;
+    TIM_TimeBaseInit(TIM16, &TIM_TimeBaseInitStruct);
+    TIM_Cmd(TIM16, ENABLE);
+
+    NVIC_InitStruct.NVIC_IRQChannel = TIM16_IRQn;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 1;
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStruct);
+    TIM_ITConfig(TIM16, TIM_IT_Update, ENABLE);
 
     // I2C
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
@@ -131,7 +146,7 @@ void hal_init()
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_2);
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_2);
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM17, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1 | RCC_APB2Periph_TIM17, ENABLE);
 
     TIM_TimeBaseInitStruct.TIM_Prescaler = 0;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
@@ -143,8 +158,8 @@ void hal_init()
     TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM2;
     TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStruct.TIM_OutputNState = TIM_OutputNState_Disable;
-    TIM_OCInitStruct.TIM_Pulse = CUR_PWM_PULSE - 1;
-    TIM_OCInitStruct.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OCInitStruct.TIM_Pulse = 0;
+    TIM_OCInitStruct.TIM_OCPolarity = TIM_OCPolarity_Low;
     TIM_OCInitStruct.TIM_OCIdleState = TIM_OCIdleState_Reset;
     TIM_OCInitStruct.TIM_OCNPolarity = TIM_OCNPolarity_Low;
     TIM_OCInitStruct.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
@@ -153,7 +168,15 @@ void hal_init()
     TIM_CtrlPWMOutputs(TIM17, ENABLE);
     TIM_Cmd(TIM17, ENABLE);
 
-    // TODO setup TIM1.3N for PB15 (Z current)
+    // TIM1.3N for Z current
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStruct);
+
+    TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Disable;
+    TIM_OCInitStruct.TIM_OutputNState = TIM_OutputNState_Enable;
+    TIM_OC3Init(TIM1, &TIM_OCInitStruct);
+
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+    TIM_Cmd(TIM1, ENABLE);
 
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
 
@@ -182,9 +205,9 @@ void hal_init()
     GPIO_Init(GPIOA, &GPIO_InitStruct);
     GPIO_SetBits(GPIOA, GPIO_Pin_0);
 
-    // SysTick sees if steps need to be sent
-    SysTick->LOAD = TICK_PERIOD - 1;
-    NVIC_SetPriority(SysTick_IRQn, 1);
+    // SysTick runs control loop
+    SysTick->LOAD = CL_PERIOD - 1;
+    NVIC_SetPriority(SysTick_IRQn, 0);
     SysTick->VAL = 0;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
 
@@ -196,6 +219,19 @@ void hal_init()
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6;
     GPIO_Init(GPIOF, &GPIO_InitStruct);
 }
+
+void hal_setXYCurrent(uint16_t c)
+{
+    uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
+    TIM17->CCR1 = pwm;
+}
+
+void hal_setZCurrent(uint16_t c)
+{
+    uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
+    TIM1->CCR3 = pwm;
+}
+
 
 // gsNode_hal functions
 // (required for correct operation of Gestalt library)
@@ -256,6 +292,14 @@ void TIM14_IRQHandler()
 
 void SysTick_Handler()
 {
+    motor_update(&motor_x);
+    motor_update(&motor_y);
+    motor_update(&motor_z);
+}
+
+
+void TIM16_IRQHandler()
+{
     int16_t x = motor_x.p >> 16;
     int16_t y = motor_y.p >> 16;
     int16_t z = motor_z.p >> 16;
@@ -265,12 +309,14 @@ void SysTick_Handler()
         GPIOB->BSRR = GPIO_Pin_5<<16; // Set direction
         GPIOB->BSRR = GPIO_Pin_4;     // Send pulse
         xp--;
+        steps_bak ++;
     }
     else if(x > xp)
     {
         GPIOB->BSRR = GPIO_Pin_5; // Set direction
         GPIOB->BSRR = GPIO_Pin_4; // Send pulse
         xp++;
+        steps_fwd ++;
     }
 
     if(y < yp)
@@ -301,22 +347,13 @@ void SysTick_Handler()
 
     // Wait 1.9 us
     // TODO make Banks fix this
-    for(uint8_t i=0; i<9; i++)
-    {
-        __NOP;
-        __NOP;
-        __NOP;
-        __NOP;
-        __NOP;
-        __NOP;
-        __NOP;
-        __NOP;
-        __NOP;
-    }
+    static volatile uint8_t i;
+    for(i=0; i<50; i++);
 
     // Clear pulses
     GPIOA->BSRR = GPIO_Pin_11<<16;
     GPIOB->BSRR = (GPIO_Pin_4 | GPIO_Pin_13)<<16;
+    TIM16->SR = ~TIM_FLAG_Update;
 }
 
 

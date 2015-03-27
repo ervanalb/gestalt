@@ -27,14 +27,15 @@ SECTIONS {
   } >FLASH
   /* The data section gets a VMA in RAM but an LMA in flash */
   _sidata = .;
-  .data : AT ( _sidata ) {
+
+  .data : {
     . = ALIGN(4);
     _sdata = .;
     *(.data)
     *(.data*)
     . = ALIGN(4);
     _edata = .;
-  } >RAM
+  } >RAM AT>FLASH
   /* The BSS goes into RAM */
   .bss : {
     . = ALIGN(4);

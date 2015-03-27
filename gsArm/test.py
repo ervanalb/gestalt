@@ -21,20 +21,45 @@ crcTable = [0, 7, 14, 9, 28, 27, 18, 21, 56, 63, 54, 49, 36, 35, 42, 45, 112, 11
 def doCrc(msg):
     crc = 0
     for m in msg:
-        crc ^= m
+        crc ^= ord(m)
         crc = crcTable[crc]
-    return crc
+    return chr(crc)
 
 s = serial.Serial("/dev/ttyUSB0", 115200)
 
+import struct
+
+msg0 = struct.pack("<BBBBB",138,0,0,5,5)
+msg = msg0 + doCrc(msg0)
+s.write(msg)
+s.flush()
+resp = s.read(48)
+print resp
+
+x = 32000*30000
+
+
+curmsg = struct.pack("<BBBBBHH",138,0,0,11,9,32768,32768)
+msg1 = struct.pack("<BBBBBiiii",138,0,0,10,21,2*x,2*x,0,65536)
+msg2 = struct.pack("<BBBBBiiii",138,0,0,10,21,x,x,0,65536)
+msg3 = struct.pack("<BBBBBiiii",138,0,0,10,21,0,0,0,65536)
+msg4 = struct.pack("<BBBBBiiii",138,0,0,10,21,-x,-x,0,65536)
+msg5 = struct.pack("<BBBBBiiii",138,0,0,10,21,-2*x,-2*x,0,65536)
+
+msg = curmsg + doCrc(curmsg)
+s.write(msg)
+s.flush()
+resp = s.read(5)
+print resp
+
 import time
 while True:
-    for msg in [[138, 0, 0, 10, 13, 0, 10, 0, 0, 0, 10, 0, 0], [138, 0, 0, 10, 13, 0, 0, 0, 0, 0, 0, 0, 0]]:
-        msg.append(doCrc(msg))
-        print msg
-        s.write(''.join([chr(c) for c in msg]))
+    for msg in [msg3, msg4, msg5]:
+        msg = msg+doCrc(msg)
+        print repr(msg)
+        s.write(msg)
         s.flush()
-        time.sleep(1)
+        time.sleep(3)
 
 #raw = s.read(49)
 print repr(raw)
