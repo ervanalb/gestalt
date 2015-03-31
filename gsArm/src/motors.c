@@ -4,6 +4,7 @@
 #define TICKS_PER_SEC 32000
 
 #define SECS_TO_TICKS(t) (((int64_t)TICKS_PER_SEC * (t)) >> 16)
+#define PERSEC_TO_PERTICK(f) (((int64_t)f << 16) / TICKS_PER_SEC)
 
 motor_t motor_x;
 motor_t motor_y;
@@ -30,8 +31,8 @@ void motor_moveTo(motor_t* m, int32_t p, int32_t t)
 void motor_jog(motor_t* m, int32_t v, int32_t t)
 {
     __disable_irq();
-    m->target_p = m->p + v * SECS_TO_TICKS(t);
-    m->v = v;
+    m->target_p = m->p + v * t;
+    m->v = PERSEC_TO_PERTICK(v);
     __enable_irq();
 }
 
