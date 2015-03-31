@@ -5,8 +5,7 @@
 
 typedef struct motor
 {
-    // Store p as 64 bits to avoid rounding error, but only the highest 16 are
-    // used to calculate position
+    // All three of these are 16.16 fixed point
     int32_t p;
     int32_t target_p;
     int32_t v;
@@ -17,6 +16,7 @@ extern motor_t motor_y;
 extern motor_t motor_z;
 
 void motor_moveTo(motor_t* m, int32_t p, int32_t t);
+void motor_jog(motor_t* m, int32_t v, int32_t t);
 
 void motor_update(motor_t* m);
 

@@ -49,11 +49,13 @@ static void sendBlankPacket()
     gsNode_transmitPacket();
 }
 
-
-#define SVC_SET_XY 10
+#define SVC_MOVE_TO 10
 #define SVC_SET_CURRENT 11
+#define SVC_ZERO 12
+#define SVC_JOG 13
+#define SVC_GET_POSITION 14
 
-static void svcSetXY()
+static void svcMoveTo()
 {
     int32_t x;
     int32_t y;
@@ -71,9 +73,53 @@ static void svcSetXY()
     motor_moveTo(&motor_z, z, t);
 }
 
+static void svcJog()
+{
+    int32_t xv;
+    int32_t yv;
+    int32_t zv;
+
+    int32_t t;
+
+    memcpy(&xv, &gsNode_packet.payload[0], sizeof(xv));
+    memcpy(&yv, &gsNode_packet.payload[4], sizeof(yv));
+    memcpy(&zv, &gsNode_packet.payload[8], sizeof(zv));
+    memcpy(&t, &gsNode_packet.payload[12], sizeof(t));
+
+    motor_jog(&motor_x, xv, t);
+    motor_jog(&motor_y, yv, t);
+    motor_jog(&motor_z, zv, t);
+}
+
+static void svcGetPosition()
+{
+    gsNode_packet.address = gsNode_address;
+    gsNode_packet.length = sizeof(int32_t) * 3 + 5;
+    memcpy(&gsNode_packet.payload[0], &motor_x.p, sizeof(int32_t));
+    memcpy(&gsNode_packet.payload[4], &motor_y.p, sizeof(int32_t));
+    memcpy(&gsNode_packet.payload[8], &motor_z.p, sizeof(int32_t));
+}
+
+static void svcZero()
+{
+    int32_t xp;
+    int32_t yp;
+    int32_t zp;
+
+    memcpy(&xp, &gsNode_packet.payload[0], sizeof(xp));
+    memcpy(&yp, &gsNode_packet.payload[4], sizeof(yp));
+    memcpy(&zp, &gsNode_packet.payload[8], sizeof(zp));
+
+    motor_zero(&motor_x, xp);
+    motor_zero(&motor_y, yp);
+    motor_zero(&motor_z, zp);
+}
+
 static void svcSetCurrent()
 {
-    uint16_t xyc, zc;
+    uint16_t xyc;
+    uint16_t zc;
+
     memcpy(&xyc, &gsNode_packet.payload[0], sizeof(xyc));
     memcpy(&zc, &gsNode_packet.payload[4], sizeof(zc));
 
@@ -100,13 +146,26 @@ void gsNode_packetReceived()
             svcSetAddress();
             break;
 
-        case SVC_SET_XY:
-            svcSetXY();
+        case SVC_MOVE_TO:
+            svcMoveTo();
             break;
 
         case SVC_SET_CURRENT:
             svcSetCurrent();
             break;
+
+        case SVC_ZERO:
+            svcZero();
+            break;
+
+       case SVC_JOG:
+            svcJog();
+            break;
+
+       case SVC_GET_POSITION:
+            svcGetPosition();
+            break;
+
         // Future
         //case GSNODE_SVC_BOOTLOADER_COMMAND:
         //case GSNODE_SVC_BOOTLOADER_DATA_PORT:

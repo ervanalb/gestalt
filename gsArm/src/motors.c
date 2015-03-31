@@ -3,6 +3,8 @@
 
 #define TICKS_PER_SEC 32000
 
+#define SECS_TO_TICKS(t) (((int64_t)TICKS_PER_SEC * (t)) >> 16)
+
 motor_t motor_x;
 motor_t motor_y;
 motor_t motor_z;
@@ -13,7 +15,7 @@ void motor_moveTo(motor_t* m, int32_t p, int32_t t)
 
     if(t > 0)
     {
-        v = (p - m->p) / (((int64_t)TICKS_PER_SEC * t) >> 16); // Calculate velocity
+        v = (p - m->p) / SECS_TO_TICKS(t); // Calculate velocity
     }
     else
     {
@@ -22,6 +24,21 @@ void motor_moveTo(motor_t* m, int32_t p, int32_t t)
     __disable_irq();
     m->target_p = p;
     m->v = v;
+    __enable_irq();
+}
+
+void motor_jog(motor_t* m, int32_t v, int32_t t)
+{
+    __disable_irq();
+    m->target_p = m->p + v * SECS_TO_TICKS(t);
+    m->v = v;
+    __enable_irq();
+}
+
+void motor_zero(motor_t* m, int32_t p)
+{
+    __disable_irq();
+    m->p = p;
     __enable_irq();
 }
 
