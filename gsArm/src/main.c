@@ -89,6 +89,8 @@ static void svcJog()
     motor_jog(&motor_x, xv, t);
     motor_jog(&motor_y, yv, t);
     motor_jog(&motor_z, zv, t);
+
+    sendBlankPacket();
 }
 
 static void svcGetPosition()
@@ -98,6 +100,8 @@ static void svcGetPosition()
     memcpy(&gsNode_packet.payload[0], &motor_x.p, sizeof(int32_t));
     memcpy(&gsNode_packet.payload[4], &motor_y.p, sizeof(int32_t));
     memcpy(&gsNode_packet.payload[8], &motor_z.p, sizeof(int32_t));
+
+    gsNode_transmitPacket();
 }
 
 static void svcZero()
@@ -113,6 +117,8 @@ static void svcZero()
     motor_zero(&motor_x, xp);
     motor_zero(&motor_y, yp);
     motor_zero(&motor_z, zp);
+
+    sendBlankPacket();
 }
 
 static void svcSetCurrent()

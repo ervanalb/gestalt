@@ -17,6 +17,7 @@ extern motor_t motor_z;
 
 void motor_moveTo(motor_t* m, int32_t p, int32_t t);
 void motor_jog(motor_t* m, int32_t v, int32_t t);
+void motor_zero(motor_t* m, int32_t p);
 
 void motor_update(motor_t* m);
 
