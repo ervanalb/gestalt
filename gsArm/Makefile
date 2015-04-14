@@ -21,7 +21,7 @@ AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m0
 CFLAGS  = $(AFLAGS) -g -O3 $(INC) -std=c99 -Wall
 CFLAGS += -DUSE_STDPERIPH_DRIVER -DSTM32F031
 CFLAGS += -DDEBUG
-CFLAGS += -fdata-sections -ffunction-sections
+CFLAGS += -ffunction-sections #-fdata-sections
 LFLAGS  = $(CFLAGS) -nostartfiles -Tflash.ld -Wl,-Map=main.map -Wl,--gc-sections
 
 # Targets

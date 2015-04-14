@@ -5,15 +5,16 @@
 #define WATCHDOG_TIMEOUT (48 * GSNODE_TIMER_US)
 
 #define CL_PERIOD 1500 // Control loop runs at 32 KHz
-#define TICK_PERIOD 375 // 128 KHz
+//#define TICK_PERIOD 375 // 128 KHz
+#define TICK_PERIOD 1500 // 32 KHz
 #define CUR_PWM 1500 // 32 KHz
-
-static int16_t xp;
-static int16_t yp;
-static int16_t zp;
 
 static volatile uint32_t steps_fwd=0;
 static volatile uint32_t steps_bak=0;
+
+static int32_t xp;
+static int32_t yp;
+static int32_t zp;
 
 void hal_init()
 {
@@ -25,24 +26,25 @@ void hal_init()
     TIM_OCInitTypeDef TIM_OCInitStruct;
 
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB |
-                          RCC_AHBPeriph_GPIOF, ENABLE);
+                          RCC_AHBPeriph_GPIOC | RCC_AHBPeriph_GPIOF, ENABLE);
+
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14 | RCC_APB1Periph_I2C1, ENABLE);
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1 | RCC_APB2Periph_TIM16 |
+                           RCC_APB2Periph_TIM17 | RCC_APB2Periph_USART1, ENABLE);
 
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
-    // GPIO: USART
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    // AF: USART
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_0);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_0);
-
     // USART
-    USART_DeInit(USART1);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource9,  GPIO_AF_1);
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_1);
+
     USART_InitStruct.USART_BaudRate = 115200;
     USART_InitStruct.USART_WordLength = USART_WordLength_8b;
     USART_InitStruct.USART_StopBits = USART_StopBits_1;
@@ -50,7 +52,6 @@ void hal_init()
     USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
     USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
     USART_Init(USART1, &USART_InitStruct);
-    USART_Cmd(USART1, ENABLE);
 
     USART_ClearITPendingBit(USART1, USART_IT_TC);
 
@@ -58,6 +59,8 @@ void hal_init()
     NVIC_InitStruct.NVIC_IRQChannelPriority = 2;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
+    
+    USART_Cmd(USART1, ENABLE);
 
     // Timeout for Gestalt Communication
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14, ENABLE);
@@ -76,16 +79,16 @@ void hal_init()
     NVIC_Init(&NVIC_InitStruct);
 
     // Timebase for sending steps
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM16, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
     TIM_TimeBaseInitStruct.TIM_Period = TICK_PERIOD - 1;
-    TIM_TimeBaseInit(TIM16, &TIM_TimeBaseInitStruct);
-    TIM_Cmd(TIM16, ENABLE);
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStruct);
+    TIM_Cmd(TIM1, ENABLE);
 
-    NVIC_InitStruct.NVIC_IRQChannel = TIM16_IRQn;
+    NVIC_InitStruct.NVIC_IRQChannel = TIM1_BRK_UP_TRG_COM_IRQn;
     NVIC_InitStruct.NVIC_IRQChannelPriority = 1;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
-    TIM_ITConfig(TIM16, TIM_IT_Update, ENABLE);
+    TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);
 
     // I2C
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
@@ -98,11 +101,6 @@ void hal_init()
     GPIO_PinAFConfig(GPIOF, GPIO_PinSource0, GPIO_AF_1);
     GPIO_PinAFConfig(GPIOF, GPIO_PinSource1, GPIO_AF_1);
 
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
-
-    //RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, ENABLE);
-    //RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
-
     I2C_InitStruct.I2C_Timing = 0x50330309; // How's that for magic constants
     I2C_InitStruct.I2C_AnalogFilter = I2C_AnalogFilter_Enable;
     I2C_InitStruct.I2C_DigitalFilter = 0;
@@ -114,45 +112,21 @@ void hal_init()
 
     I2C_Cmd(I2C1, ENABLE);
 
-    // Zero internal motor positions
-    xp = 0;
-    yp = 0;
-    zp = 0;
-
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-
-    // STEP pins
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_11;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_13;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    // DIR pins
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_14;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-
     // Current pins
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_15;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_2);
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_2);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_2);
-
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1 | RCC_APB2Periph_TIM17, ENABLE);
 
     TIM_TimeBaseInitStruct.TIM_Prescaler = 0;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInitStruct.TIM_Period = CUR_PWM - 1;
     TIM_TimeBaseInitStruct.TIM_ClockDivision = 0;
     TIM_TimeBaseInitStruct.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIM16, &TIM_TimeBaseInitStruct);
     TIM_TimeBaseInit(TIM17, &TIM_TimeBaseInitStruct);
 
     TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM2;
@@ -163,47 +137,52 @@ void hal_init()
     TIM_OCInitStruct.TIM_OCIdleState = TIM_OCIdleState_Reset;
     TIM_OCInitStruct.TIM_OCNPolarity = TIM_OCNPolarity_Low;
     TIM_OCInitStruct.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
+    TIM_OC1Init(TIM16, &TIM_OCInitStruct);
     TIM_OC1Init(TIM17, &TIM_OCInitStruct);
 
+    TIM_CtrlPWMOutputs(TIM16, ENABLE);
     TIM_CtrlPWMOutputs(TIM17, ENABLE);
+    TIM_Cmd(TIM16, ENABLE);
     TIM_Cmd(TIM17, ENABLE);
-
-    // TIM1.3N for Z current
-    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStruct);
-
-    TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Disable;
-    TIM_OCInitStruct.TIM_OutputNState = TIM_OutputNState_Enable;
-    TIM_OC3Init(TIM1, &TIM_OCInitStruct);
-
-    TIM_CtrlPWMOutputs(TIM1, ENABLE);
-    TIM_Cmd(TIM1, ENABLE);
 
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
 
-    // Microstep pins
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10;
+    // STEP pins
+    GPIO_SetBits(GPIOA, GPIO_Pin_11);
+    GPIO_SetBits(GPIOB, GPIO_Pin_5 | GPIO_Pin_12);
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_11;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_12;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7;
+
+    // DIR pins
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_13;
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6;
     GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-    // TEMP
-    GPIO_SetBits(GPIOA, GPIO_Pin_15 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10);
-    GPIO_SetBits(GPIOB, GPIO_Pin_3 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12);
-    GPIO_SetBits(GPIOF, GPIO_Pin_7);
+    // Microstep pins
+    // 1/32 microstepping
+    GPIO_SetBits(GPIOA, GPIO_Pin_8);
+    GPIO_SetBits(GPIOB, GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_6 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_14 | GPIO_Pin_15);
 
-    // Reset pin
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_6 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_14 | GPIO_Pin_15;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    // TEMP
-    GPIO_SetBits(GPIOB, GPIO_Pin_8);
+    // Reset pin
+    GPIO_SetBits(GPIOA, GPIO_Pin_15);
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     // LED
+    GPIO_SetBits(GPIOA, GPIO_Pin_0);
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
-    GPIO_SetBits(GPIOA, GPIO_Pin_0);
 
     // SysTick runs control loop
     SysTick->LOAD = CL_PERIOD - 1;
@@ -211,13 +190,30 @@ void hal_init()
     SysTick->VAL = 0;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
 
+    // Fault
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6;
-    GPIO_Init(GPIOF, &GPIO_InitStruct);
+    // Handle buttons
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14;
+    GPIO_Init(GPIOC, &GPIO_InitStruct);
+}
+
+void hal_changeX(int32_t deltaX)
+{
+    xp += deltaX >> 11;
+}
+
+void hal_changeY(int32_t deltaY)
+{
+    yp += deltaY >> 11;
+}
+
+void hal_changeZ(int32_t deltaZ)
+{
+    zp += deltaZ >> 11;
 }
 
 void hal_setXYCurrent(uint16_t c)
@@ -229,9 +225,18 @@ void hal_setXYCurrent(uint16_t c)
 void hal_setZCurrent(uint16_t c)
 {
     uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
-    TIM1->CCR3 = pwm;
+    TIM16->CCR1 = pwm;
 }
 
+uint8_t hal_leftButton()
+{
+    return !(GPIO_ReadInputData(GPIOC) & GPIO_Pin_13);
+}
+
+uint8_t hal_rightButton()
+{
+    return !(GPIO_ReadInputData(GPIOC) & GPIO_Pin_14);
+}
 
 // gsNode_hal functions
 // (required for correct operation of Gestalt library)
@@ -297,51 +302,48 @@ void SysTick_Handler()
     motor_update(&motor_z);
 }
 
-
-void TIM16_IRQHandler()
+void TIM1_BRK_UP_TRG_COM_IRQHandler()
 {
-    int16_t x = motor_x.p >> 16;
-    int16_t y = motor_y.p >> 16;
-    int16_t z = motor_z.p >> 16;
+    int32_t x = motor_x.p >> 11;
+    int32_t y = motor_y.p >> 11;
+    int32_t z = motor_z.p >> 11;
 
     if(x < xp)
     {
-        GPIOB->BSRR = GPIO_Pin_5<<16; // Set direction
-        GPIOB->BSRR = GPIO_Pin_4;     // Send pulse
+        GPIOB->BSRR = GPIO_Pin_7<<16; // Set direction
+        GPIOB->BSRR = GPIO_Pin_5; // Set step high
         xp--;
-        steps_bak ++;
     }
     else if(x > xp)
     {
-        GPIOB->BSRR = GPIO_Pin_5; // Set direction
-        GPIOB->BSRR = GPIO_Pin_4; // Send pulse
+        GPIOB->BSRR = GPIO_Pin_7; // Set direction
+        GPIOB->BSRR = GPIO_Pin_5; // Set step high
         xp++;
-        steps_fwd ++;
     }
 
     if(y < yp)
     {
-        GPIOA->BSRR = GPIO_Pin_12<<16; // Set direction
-        GPIOA->BSRR = GPIO_Pin_11;     // Send pulse
+        GPIOB->BSRR = GPIO_Pin_13<<16; // Set direction
+        GPIOB->BSRR = GPIO_Pin_12; // Set step high
         yp--;
     }
     else if(y > yp)
     {
-        GPIOA->BSRR = GPIO_Pin_12; // Set direction
-        GPIOA->BSRR = GPIO_Pin_11; // Send pulse
+        GPIOB->BSRR = GPIO_Pin_13; // Set direction
+        GPIOB->BSRR = GPIO_Pin_12; // Set step high
         yp++;
     }
 
     if(z < zp)
     {
-        GPIOB->BSRR = GPIO_Pin_14<<16; // Set direction
-        GPIOB->BSRR = GPIO_Pin_13;     // Send pulse
+        GPIOF->BSRR = GPIO_Pin_6<<16; // Set direction
+        GPIOA->BSRR = GPIO_Pin_11; // Set step high
         zp--;
     }
     else if(z > zp)
     {
-        GPIOB->BSRR = GPIO_Pin_14; // Set direction
-        GPIOB->BSRR = GPIO_Pin_13; // Send pulse
+        GPIOF->BSRR = GPIO_Pin_6; // Set direction
+        GPIOA->BSRR = GPIO_Pin_11; // Set step high
         zp++;
     }
 
@@ -350,10 +352,11 @@ void TIM16_IRQHandler()
     static volatile uint8_t i;
     for(i=0; i<50; i++);
 
-    // Clear pulses
+    // Set all steps low
     GPIOA->BSRR = GPIO_Pin_11<<16;
-    GPIOB->BSRR = (GPIO_Pin_4 | GPIO_Pin_13)<<16;
-    TIM16->SR = ~TIM_FLAG_Update;
+    GPIOB->BSRR = (GPIO_Pin_5 | GPIO_Pin_12)<<16;
+
+    TIM1->SR = ~TIM_FLAG_Update;
 }
 
 

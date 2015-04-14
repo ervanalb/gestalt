@@ -1,4 +1,5 @@
 import serial
+import struct
 
 crcTable = [0, 7, 14, 9, 28, 27, 18, 21, 56, 63, 54, 49, 36, 35, 42, 45, 112, 119,
             126, 121, 108, 107, 98, 101, 72, 79, 70, 65, 84, 83, 90, 93, 224, 231,
@@ -25,44 +26,85 @@ def doCrc(msg):
         crc = crcTable[crc]
     return chr(crc)
 
-s = serial.Serial("/dev/ttyUSB0", 115200)
+s = serial.Serial("/dev/ttyUSB0", 115200, timeout = 1)
 
-import struct
+def sendPacket(port, message = "", address = None):
+    if address is None:
+        address = 0
+        first = 138
+    else:
+        first = 72
+    length = len(message) + 5
+    message = struct.pack("<BHBB", first, address, port, length) + message
+    message = message + doCrc(message)
+    s.write(message)
 
-msg0 = struct.pack("<BBBBB",138,0,0,5,5)
-msg = msg0 + doCrc(msg0)
-s.write(msg)
-s.flush()
-resp = s.read(48)
-print resp
+def recvPacket(port, address = None):
+    header = s.read(5)
+    if len(header) < 5:
+        raise Exception("Timeout")
+    (first, receivedAddress, receivedPort, length) = struct.unpack("<BHBB", header)
+    if address is None:
+        if first != 138:
+            raise Exception("Bad first byte. Expected 138, got {0}".format(ord(first)))
+    else:
+        if first != 72:
+            raise Exception("Bad first byte. Expected 72, got {0}".format(ord(first)))
+        if receivedAddress != address:
+            raise Exception("Bad address. Got {0}, expected {1}.".format(receivedAddress, address))
+    if port != receivedPort:
+        raise Exception("Bad port. Got {0}, expected {1}.".format(receivedPort, port))
+    payload = s.read(length - 5)
+    if len(payload) < length - 5:
+        raise Exception("Timeout")
+    receivedCRC = s.read(1)
+    if len(receivedCRC) < 1:
+        raise Exception("Timeout")
+    correctCRC = doCrc(header + payload)
+    if receivedCRC != correctCRC:
+        raise Exception("Bad CRC. Got {0}, expected {1}".format(ord(receivedCRC), ord(correctCRC)))
+    return payload
 
-x = 32000*30000
+def assertPacket(port, address = None):
+    response = recvPacket(port, address)
+    if response != "":
+        raise Exception("Received unexpected response: {0}".format(repr(response)))
 
+def send_svcRequestURL(address = None):
+    sendPacket(5, address = address)
+    return recvPacket(5, address = address)
 
-curmsg = struct.pack("<BBBBBHH",138,0,0,11,9,32768,32768)
-msg1 = struct.pack("<BBBBBiiii",138,0,0,10,21,2*x,2*x,0,65536)
-msg2 = struct.pack("<BBBBBiiii",138,0,0,10,21,x,x,0,65536)
-msg3 = struct.pack("<BBBBBiiii",138,0,0,10,21,0,0,0,65536)
-msg4 = struct.pack("<BBBBBiiii",138,0,0,10,21,-x,-x,0,65536)
-msg5 = struct.pack("<BBBBBiiii",138,0,0,10,21,-2*x,-2*x,0,65536)
+def send_MoveTo(x, y, z, t, address = None):
+    sendPacket(10, struct.pack("<iiii", int(x * 65536), int(y * 65536), int (z * 65536), int(t * 65536)), address = address)
 
-msg = curmsg + doCrc(curmsg)
-s.write(msg)
-s.flush()
-resp = s.read(5)
-print resp
+def send_Jog(xv, yv, zv, t, address = None):
+    sendPacket(13, struct.pack("<iiii", int(xv * 65536), int(yv * 65536), int (zv * 65536), int(t * 65536)), address = address)
+    assertPacket(13, address = address)
+
+def send_SetCurrent(xyc, zc, address = None):
+    sendPacket(11, struct.pack("<HH", int(xyc * 65536), int(zc * 65536)), address = address)
+    assertPacket(11, address = address)
+
+def send_Zero(x, y, z, address = None):
+    sendPacket(12, struct.pack("<iii", int(x * 65536), int(y * 65536), int(z*65536)), address = address)
+    assertPacket(12, address = address)
+
+def send_GetPosition(address = None):
+    sendPacket(14, "", address = address)
+    response = recvPacket(14, address = address)
+    (xf, yf, zf) = struct.unpack("<iii", response)
+    return (float(xf)/65536, float(yf)/65536, float(zf)/65536)
 
 import time
-while True:
-    for msg in [msg3, msg4, msg5]:
-        msg = msg+doCrc(msg)
-        print repr(msg)
-        s.write(msg)
-        s.flush()
-        time.sleep(3)
 
-#raw = s.read(49)
-print repr(raw)
-msg = [ord(c) for c in raw]
-print doCrc(msg)
+print send_svcRequestURL()
+send_SetCurrent(0.5, 0.5)
+#send_Zero(0, 0, 0)
+print send_GetPosition()
+send_Jog(0, 0, 200, 1)
+for i in range(3):
+    time.sleep(1.1)
+    print send_GetPosition()
+#send_Zero(0, 0, 0)
+print send_GetPosition()
 

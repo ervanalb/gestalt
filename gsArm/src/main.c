@@ -5,6 +5,8 @@
 
 static const char url[] = "http://www.taktia.com/gestalt/nodes/2B1-021";
 
+void i2c_test();
+
 int main()
 {
     // Set up hardware
@@ -13,6 +15,8 @@ int main()
     // Set up Gestalt library
     gsNode_address = 0xCCCC;
     gsNode_init();
+
+//    i2c_test();
 
     // Application code here
     for(;;);
@@ -54,6 +58,7 @@ static void sendBlankPacket()
 #define SVC_ZERO 12
 #define SVC_JOG 13
 #define SVC_GET_POSITION 14
+#define SVC_GET_BUTTONS 15
 
 static void svcMoveTo()
 {
@@ -135,6 +140,16 @@ static void svcSetCurrent()
     sendBlankPacket();
 }
 
+static void svcGetButtons()
+{
+    gsNode_packet.address = gsNode_address;
+    gsNode_packet.length = 2 + 5;
+    gsNode_packet.payload[0] = hal_leftButton();
+    gsNode_packet.payload[1] = hal_rightButton();
+
+    gsNode_transmitPacket();
+}
+
 // Called when a Gestalt packet arrives
 void gsNode_packetReceived()
 {
@@ -170,6 +185,10 @@ void gsNode_packetReceived()
 
        case SVC_GET_POSITION:
             svcGetPosition();
+            break;
+
+       case SVC_GET_BUTTONS:
+            svcGetButtons();
             break;
 
         // Future
