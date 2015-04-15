@@ -132,7 +132,7 @@ static void svcSetCurrent()
     uint16_t zc;
 
     memcpy(&xyc, &gsNode_packet.payload[0], sizeof(xyc));
-    memcpy(&zc, &gsNode_packet.payload[4], sizeof(zc));
+    memcpy(&zc, &gsNode_packet.payload[2], sizeof(zc));
 
     hal_setXYCurrent(xyc);
     hal_setZCurrent(zc);

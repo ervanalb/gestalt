@@ -4,7 +4,6 @@
 #define TICKS_PER_SEC 32000
 
 #define SECS_TO_TICKS(t) (int32_t)(((int64_t)(TICKS_PER_SEC) * (t)) >> 16)
-//#define PERSEC_TO_PERTICK(f) (int32_t)(((int64_t)(f) * (((int64_t)1 << 48) / (TICKS_PER_SEC)) >> 32))
 #define PERSEC_TO_PERTICK(f) ((f) / (TICKS_PER_SEC))
 
 motor_t motor_x;

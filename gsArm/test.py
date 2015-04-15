@@ -101,10 +101,11 @@ print send_svcRequestURL()
 send_SetCurrent(0.5, 0.5)
 #send_Zero(0, 0, 0)
 print send_GetPosition()
-send_Jog(0, 0, 200, 1)
+send_MoveTo(0, 0, 200, 1)
 for i in range(3):
     time.sleep(1.1)
     print send_GetPosition()
+send_MoveTo(0, 0, 0, 1)
 #send_Zero(0, 0, 0)
 print send_GetPosition()
 

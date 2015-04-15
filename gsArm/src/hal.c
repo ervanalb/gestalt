@@ -196,6 +196,9 @@ void hal_init()
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7;
+    GPIO_Init(GPIOF, &GPIO_InitStruct);
+
     // Handle buttons
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14;
     GPIO_Init(GPIOC, &GPIO_InitStruct);
