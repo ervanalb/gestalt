@@ -16,7 +16,7 @@ int main()
     gsNode_address = 0xCCCC;
     gsNode_init();
 
-//    i2c_test();
+    //i2c_test();
 
     // Application code here
     for(;;);
@@ -128,13 +128,16 @@ static void svcZero()
 
 static void svcSetCurrent()
 {
-    uint16_t xyc;
+    uint16_t xc;
+    uint16_t yc;
     uint16_t zc;
 
-    memcpy(&xyc, &gsNode_packet.payload[0], sizeof(xyc));
-    memcpy(&zc, &gsNode_packet.payload[2], sizeof(zc));
+    memcpy(&xc, &gsNode_packet.payload[0], sizeof(xc));
+    memcpy(&yc, &gsNode_packet.payload[2], sizeof(yc));
+    memcpy(&zc, &gsNode_packet.payload[4], sizeof(zc));
 
-    hal_setXYCurrent(xyc);
+    hal_setXCurrent(xc);
+    hal_setYCurrent(yc);
     hal_setZCurrent(zc);
 
     sendBlankPacket();

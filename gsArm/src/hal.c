@@ -6,7 +6,7 @@
 
 #define CL_PERIOD 1500 // Control loop runs at 32 KHz
 //#define TICK_PERIOD 375 // 128 KHz
-#define TICK_PERIOD 1500 // 32 KHz
+//#define TICK_PERIOD 750 // 64 KHz
 #define CUR_PWM 1500 // 32 KHz
 
 static volatile uint32_t steps_fwd=0;
@@ -78,18 +78,6 @@ void hal_init()
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 
-    // Timebase for sending steps
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
-    TIM_TimeBaseInitStruct.TIM_Period = TICK_PERIOD - 1;
-    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStruct);
-    TIM_Cmd(TIM1, ENABLE);
-
-    NVIC_InitStruct.NVIC_IRQChannel = TIM1_BRK_UP_TRG_COM_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 1;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStruct);
-    TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);
-
     // I2C
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
@@ -100,6 +88,8 @@ void hal_init()
 
     GPIO_PinAFConfig(GPIOF, GPIO_PinSource0, GPIO_AF_1);
     GPIO_PinAFConfig(GPIOF, GPIO_PinSource1, GPIO_AF_1);
+
+    RCC_I2CCLKConfig(RCC_I2C1CLK_HSI);
 
     I2C_InitStruct.I2C_Timing = 0x50330309; // How's that for magic constants
     I2C_InitStruct.I2C_AnalogFilter = I2C_AnalogFilter_Enable;
@@ -112,12 +102,51 @@ void hal_init()
 
     I2C_Cmd(I2C1, ENABLE);
 
-    // Current pins
+    // Current pins and LED
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_14 | GPIO_Pin_15;
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_11;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_4);
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource11, GPIO_AF_2);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource14, GPIO_AF_2);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_2);
+
+    TIM_TimeBaseInitStruct.TIM_Prescaler = 0;
+    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInitStruct.TIM_Period = CUR_PWM - 1;
+    TIM_TimeBaseInitStruct.TIM_ClockDivision = 0;
+    TIM_TimeBaseInitStruct.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStruct);
+
+    TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM2;
+    TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
+    TIM_OCInitStruct.TIM_OutputNState = TIM_OutputNState_Enable;
+    TIM_OCInitStruct.TIM_Pulse = 0;
+    TIM_OCInitStruct.TIM_OCPolarity = TIM_OCPolarity_Low;
+    TIM_OCInitStruct.TIM_OCIdleState = TIM_OCIdleState_Reset;
+    TIM_OCInitStruct.TIM_OCNPolarity = TIM_OCNPolarity_Low;
+    TIM_OCInitStruct.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
+    TIM_OC2Init(TIM1, &TIM_OCInitStruct);
+    TIM_OC3Init(TIM1, &TIM_OCInitStruct);
+    TIM_OC4Init(TIM1, &TIM_OCInitStruct);
+
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+
+    // STEP pins
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_1);
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_2);
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_2);
 
@@ -126,6 +155,8 @@ void hal_init()
     TIM_TimeBaseInitStruct.TIM_Period = CUR_PWM - 1;
     TIM_TimeBaseInitStruct.TIM_ClockDivision = 0;
     TIM_TimeBaseInitStruct.TIM_RepetitionCounter = 0;
+
+    TIM_TimeBaseInit(TIM3,  &TIM_TimeBaseInitStruct);
     TIM_TimeBaseInit(TIM16, &TIM_TimeBaseInitStruct);
     TIM_TimeBaseInit(TIM17, &TIM_TimeBaseInitStruct);
 
@@ -137,27 +168,22 @@ void hal_init()
     TIM_OCInitStruct.TIM_OCIdleState = TIM_OCIdleState_Reset;
     TIM_OCInitStruct.TIM_OCNPolarity = TIM_OCNPolarity_Low;
     TIM_OCInitStruct.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
+
+    TIM_SelectOnePulseMode(TIM3,  TIM_OPMode_Single);
+    TIM_SelectOnePulseMode(TIM16, TIM_OPMode_Single);
+    TIM_SelectOnePulseMode(TIM17, TIM_OPMode_Single);
+
+    TIM_CtrlPWMOutputs(TIM3,  ENABLE);
+    TIM_CtrlPWMOutputs(TIM16, ENABLE);
+    TIM_CtrlPWMOutputs(TIM17, ENABLE);
+
+    TIM_OC1Init(TIM3,  &TIM_OCInitStruct);
     TIM_OC1Init(TIM16, &TIM_OCInitStruct);
     TIM_OC1Init(TIM17, &TIM_OCInitStruct);
 
-    TIM_CtrlPWMOutputs(TIM16, ENABLE);
-    TIM_CtrlPWMOutputs(TIM17, ENABLE);
-    TIM_Cmd(TIM16, ENABLE);
-    TIM_Cmd(TIM17, ENABLE);
-
+    // DIR pins
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
 
-    // STEP pins
-    GPIO_SetBits(GPIOA, GPIO_Pin_11);
-    GPIO_SetBits(GPIOB, GPIO_Pin_5 | GPIO_Pin_12);
-
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_11;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_12;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    // DIR pins
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_13;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -166,22 +192,17 @@ void hal_init()
 
     // Microstep pins
     // 1/32 microstepping
-    GPIO_SetBits(GPIOA, GPIO_Pin_8);
-    GPIO_SetBits(GPIOB, GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_6 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_14 | GPIO_Pin_15);
+    GPIO_SetBits(GPIOA, GPIO_Pin_4);
+    GPIO_SetBits(GPIOB, GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_6 | GPIO_Pin_10 | GPIO_Pin_11);
 
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_4;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_6 | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_14 | GPIO_Pin_15;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_6 | GPIO_Pin_10 | GPIO_Pin_11;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     // Reset pin
     GPIO_SetBits(GPIOA, GPIO_Pin_15);
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_15;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    // LED
-    GPIO_SetBits(GPIOA, GPIO_Pin_0);
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     // SysTick runs control loop
@@ -193,6 +214,7 @@ void hal_init()
     // Fault
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -200,7 +222,8 @@ void hal_init()
     GPIO_Init(GPIOF, &GPIO_InitStruct);
 
     // Handle buttons
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_14 | GPIO_Pin_15;
     GPIO_Init(GPIOC, &GPIO_InitStruct);
 }
 
@@ -219,26 +242,32 @@ void hal_changeZ(int32_t deltaZ)
     zp += deltaZ >> 11;
 }
 
-void hal_setXYCurrent(uint16_t c)
+void hal_setXCurrent(uint16_t c)
 {
     uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
-    TIM17->CCR1 = pwm;
+    TIM1->CCR3 = pwm;
+}
+
+void hal_setYCurrent(uint16_t c)
+{
+    uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
+    TIM1->CCR2 = pwm;
 }
 
 void hal_setZCurrent(uint16_t c)
 {
     uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
-    TIM16->CCR1 = pwm;
+    TIM1->CCR4 = pwm;
 }
 
 uint8_t hal_leftButton()
 {
-    return !(GPIO_ReadInputData(GPIOC) & GPIO_Pin_13);
+    return !(GPIO_ReadInputData(GPIOC) & GPIO_Pin_14);
 }
 
 uint8_t hal_rightButton()
 {
-    return !(GPIO_ReadInputData(GPIOC) & GPIO_Pin_14);
+    return !(GPIO_ReadInputData(GPIOC) & GPIO_Pin_15);
 }
 
 // gsNode_hal functions
@@ -300,66 +329,51 @@ void TIM14_IRQHandler()
 
 void SysTick_Handler()
 {
-    motor_update(&motor_x);
-    motor_update(&motor_y);
-    motor_update(&motor_z);
-}
-
-void TIM1_BRK_UP_TRG_COM_IRQHandler()
-{
     int32_t x = motor_x.p >> 11;
     int32_t y = motor_y.p >> 11;
     int32_t z = motor_z.p >> 11;
 
+    motor_update(&motor_x);
+    motor_update(&motor_y);
+    motor_update(&motor_z);
+
     if(x < xp)
     {
         GPIOB->BSRR = GPIO_Pin_7<<16; // Set direction
-        GPIOB->BSRR = GPIO_Pin_5; // Set step high
+        TIM17->CR1 |= TIM_CR1_CEN;
         xp--;
     }
     else if(x > xp)
     {
         GPIOB->BSRR = GPIO_Pin_7; // Set direction
-        GPIOB->BSRR = GPIO_Pin_5; // Set step high
+        TIM17->CR1 |= TIM_CR1_CEN;
         xp++;
     }
 
     if(y < yp)
     {
         GPIOB->BSRR = GPIO_Pin_13<<16; // Set direction
-        GPIOB->BSRR = GPIO_Pin_12; // Set step high
+        TIM3->CR1 |= TIM_CR1_CEN;
         yp--;
     }
     else if(y > yp)
     {
         GPIOB->BSRR = GPIO_Pin_13; // Set direction
-        GPIOB->BSRR = GPIO_Pin_12; // Set step high
+        TIM3->CR1 |= TIM_CR1_CEN;
         yp++;
     }
 
     if(z < zp)
     {
         GPIOF->BSRR = GPIO_Pin_6<<16; // Set direction
-        GPIOA->BSRR = GPIO_Pin_11; // Set step high
+        TIM16->CR1 |= TIM_CR1_CEN;
         zp--;
     }
     else if(z > zp)
     {
         GPIOF->BSRR = GPIO_Pin_6; // Set direction
-        GPIOA->BSRR = GPIO_Pin_11; // Set step high
+        TIM16->CR1 |= TIM_CR1_CEN;
         zp++;
     }
-
-    // Wait 1.9 us
-    // TODO make Banks fix this
-    static volatile uint8_t i;
-    for(i=0; i<50; i++);
-
-    // Set all steps low
-    GPIOA->BSRR = GPIO_Pin_11<<16;
-    GPIOB->BSRR = (GPIO_Pin_5 | GPIO_Pin_12)<<16;
-
-    TIM1->SR = ~TIM_FLAG_Update;
 }
-
 

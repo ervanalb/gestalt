@@ -82,7 +82,7 @@ def send_Jog(xv, yv, zv, t, address = None):
     assertPacket(13, address = address)
 
 def send_SetCurrent(xyc, zc, address = None):
-    sendPacket(11, struct.pack("<HH", int(xyc * 65536), int(zc * 65536)), address = address)
+    sendPacket(11, struct.pack("<HH", int(xyc * 65535), int(zc * 65535)), address = address)
     assertPacket(11, address = address)
 
 def send_Zero(x, y, z, address = None):
@@ -95,17 +95,21 @@ def send_GetPosition(address = None):
     (xf, yf, zf) = struct.unpack("<iii", response)
     return (float(xf)/65536, float(yf)/65536, float(zf)/65536)
 
+def send_GetButtons(address = None):
+    sendPacket(15, "", address = address)
+    response = recvPacket(15, address = address)
+    (lb, rb) = struct.unpack("<BB", response)
+    return tuple([bool(b) for b in (lb,rb)])
+
 import time
 
 print send_svcRequestURL()
-send_SetCurrent(0.5, 0.5)
-#send_Zero(0, 0, 0)
-print send_GetPosition()
-send_MoveTo(0, 0, 200, 1)
-for i in range(3):
-    time.sleep(1.1)
-    print send_GetPosition()
+send_SetCurrent(1, 1)
+send_Zero(0, 0, 0)
+send_MoveTo(400, 0, 0, 2)
+time.sleep(3)
 send_MoveTo(0, 0, 0, 1)
-#send_Zero(0, 0, 0)
-print send_GetPosition()
 
+while True:
+    print send_GetButtons()
+    time.sleep(0.1)
