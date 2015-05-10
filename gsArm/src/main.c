@@ -18,8 +18,22 @@ int main()
 
     //i2c_test();
 
+    /*
+    hal_setLED(65535 / 32);
+
+    hal_setXCurrent(65535 / 2);
+    hal_setYCurrent(65535 / 2);
+    hal_setZCurrent(65535 / 2);
+    motor_jog(&motor_x, 65536 * 3200, 65536 / 2);
+    motor_jog(&motor_y, 65536 * 3200, 65536 / 2);
+    motor_jog(&motor_z, 65536 * 3200, 65536 / 2);
+    */
+
     // Application code here
-    for(;;);
+    for(;;)
+    {
+        hal_poll();
+    }
 }
 
 // Service functions to handle incoming standard packets
@@ -59,6 +73,7 @@ static void sendBlankPacket()
 #define SVC_JOG 13
 #define SVC_GET_POSITION 14
 #define SVC_GET_BUTTONS 15
+#define SVC_SET_LED 20
 
 static void svcMoveTo()
 {
@@ -153,6 +168,17 @@ static void svcGetButtons()
     gsNode_transmitPacket();
 }
 
+static void svcSetLED()
+{
+    uint16_t b;
+
+    memcpy(&b, &gsNode_packet.payload[0], sizeof(b));
+
+    hal_setLED(b);
+
+    sendBlankPacket();
+}
+
 // Called when a Gestalt packet arrives
 void gsNode_packetReceived()
 {
@@ -192,6 +218,10 @@ void gsNode_packetReceived()
 
        case SVC_GET_BUTTONS:
             svcGetButtons();
+            break;
+
+       case SVC_SET_LED:
+            svcSetLED();
             break;
 
         // Future
