@@ -74,6 +74,8 @@ static void sendBlankPacket()
 #define SVC_GET_POSITION 14
 #define SVC_GET_BUTTONS 15
 #define SVC_SET_LED 20
+#define SVC_SET_SOFT_LIMITS 21
+#define SVC_GET_LIMITS 22
 
 static void svcMoveTo()
 {
@@ -179,6 +181,43 @@ static void svcSetLED()
     sendBlankPacket();
 }
 
+static void svcSetSoftLimits()
+{
+    int32_t x_lower;
+    int32_t y_lower;
+    int32_t z_lower;
+    int32_t x_upper;
+    int32_t y_upper;
+    int32_t z_upper;
+
+    memcpy(&x_lower, &gsNode_packet.payload[0],  sizeof(x_lower));
+    memcpy(&y_lower, &gsNode_packet.payload[4],  sizeof(y_lower));
+    memcpy(&z_lower, &gsNode_packet.payload[8],  sizeof(z_lower));
+    memcpy(&x_upper, &gsNode_packet.payload[12], sizeof(x_upper));
+    memcpy(&y_upper, &gsNode_packet.payload[16], sizeof(y_upper));
+    memcpy(&z_upper, &gsNode_packet.payload[20], sizeof(z_upper));
+
+    motor_setSoftLowerLimit(&motor_x, x_lower);
+    motor_setSoftLowerLimit(&motor_y, y_lower);
+    motor_setSoftLowerLimit(&motor_z, z_lower);
+
+    motor_setSoftUpperLimit(&motor_x, x_upper);
+    motor_setSoftUpperLimit(&motor_y, y_upper);
+    motor_setSoftUpperLimit(&motor_z, z_upper);
+    sendBlankPacket();
+}
+
+static void svcGetLimits()
+{
+    gsNode_packet.address = gsNode_address;
+    gsNode_packet.length = 3 + 5;
+    gsNode_packet.payload[0] = hal_getLimitsX();
+    gsNode_packet.payload[1] = hal_getLimitsY();
+    gsNode_packet.payload[2] = hal_getLimitsZ();
+
+    gsNode_transmitPacket();
+}
+
 // Called when a Gestalt packet arrives
 void gsNode_packetReceived()
 {
@@ -222,6 +261,14 @@ void gsNode_packetReceived()
 
        case SVC_SET_LED:
             svcSetLED();
+            break;
+
+       case SVC_SET_SOFT_LIMITS:
+            svcSetSoftLimits();
+            break;
+
+       case SVC_GET_LIMITS:
+            svcGetLimits();
             break;
 
         // Future

@@ -9,6 +9,7 @@ typedef struct motor
     int32_t p;
     int32_t target_p;
     int32_t v;
+    uint8_t stop_on_limit;
 } motor_t;
 
 extern motor_t motor_x;
@@ -18,7 +19,9 @@ extern motor_t motor_z;
 void motor_moveTo(motor_t* m, int32_t p, int32_t t);
 void motor_jog(motor_t* m, int32_t v, int32_t t);
 void motor_zero(motor_t* m, int32_t p);
+void motor_setSoftUpperLimit(motor_t* m, int32_t p);
+void motor_setSoftLowerLimit(motor_t* m, int32_t p);
 
-void motor_update(motor_t* m);
+void motor_update(motor_t* m, uint8_t limits);
 
 #endif

@@ -1,4 +1,5 @@
 #include "stm32f0xx.h"
+#include "hal.h"
 #include "gsnode_hal.h"
 #include "motors.h"
 
@@ -15,6 +16,17 @@ static volatile uint32_t steps_bak=0;
 static int32_t xp;
 static int32_t yp;
 static int32_t zp;
+
+static int32_t xp_soft_lower_limit;
+static int32_t xp_soft_upper_limit;
+static int32_t yp_soft_lower_limit;
+static int32_t yp_soft_upper_limit;
+static int32_t zp_soft_lower_limit;
+static int32_t zp_soft_upper_limit;
+
+static uint8_t x_limits;
+static uint8_t y_limits;
+static uint8_t z_limits;
 
 static int32_t gsTimer;
 
@@ -234,16 +246,22 @@ void hal_init()
 void hal_changeX(int32_t deltaX)
 {
     xp += deltaX >> 11;
+    xp_soft_lower_limit += deltaX >> 11;
+    xp_soft_upper_limit += deltaX >> 11;
 }
 
 void hal_changeY(int32_t deltaY)
 {
     yp += deltaY >> 11;
+    yp_soft_lower_limit += deltaY >> 11;
+    yp_soft_upper_limit += deltaY >> 11;
 }
 
 void hal_changeZ(int32_t deltaZ)
 {
     zp += deltaZ >> 11;
+    zp_soft_lower_limit += deltaZ >> 11;
+    zp_soft_upper_limit += deltaZ >> 11;
 }
 
 void hal_setXCurrent(uint16_t c)
@@ -262,6 +280,51 @@ void hal_setZCurrent(uint16_t c)
 {
     uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
     TIM1->CCR4 = pwm;
+}
+
+void hal_setLowerSoftLimitX(int32_t p)
+{
+    xp_soft_lower_limit = xp + (p >> 11);
+}
+
+void hal_setLowerSoftLimitY(int32_t p)
+{
+    yp_soft_lower_limit = yp + (p >> 11);
+}
+
+void hal_setLowerSoftLimitZ(int32_t p)
+{
+    zp_soft_lower_limit = zp + (p >> 11);
+}
+
+void hal_setUpperSoftLimitX(int32_t p)
+{
+    xp_soft_upper_limit = xp + (p >> 11);
+}
+
+void hal_setUpperSoftLimitY(int32_t p)
+{
+    yp_soft_upper_limit = yp + (p >> 11);
+}
+
+void hal_setUpperSoftLimitZ(int32_t p)
+{
+    zp_soft_upper_limit = zp + (p >> 11);
+}
+
+uint8_t hal_getLimitsX()
+{
+    return x_limits;
+}
+
+uint8_t hal_getLimitsY()
+{
+    return y_limits;
+}
+
+uint8_t hal_getLimitsZ()
+{
+    return z_limits;
 }
 
 uint8_t hal_leftButton()
@@ -386,12 +449,27 @@ void hal_poll()
     }
 }
 
+static void update_motor_limits()
+{
+    x_limits = ((xp <= xp_soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
+               ((xp >= xp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
+
+    y_limits = ((yp <= yp_soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
+               ((yp >= yp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
+
+    z_limits = ((zp <= zp_soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
+               ((zp >= zp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
+}
+
 // Systick handles updating of motors
 void SysTick_Handler()
 {
     if(gsTimer > 0) gsTimer--;
-    motor_update(&motor_x);
-    motor_update(&motor_y);
-    motor_update(&motor_z);
+
+    update_motor_limits();
+
+    motor_update(&motor_x, x_limits);
+    motor_update(&motor_y, y_limits);
+    motor_update(&motor_z, z_limits);
 }
 
