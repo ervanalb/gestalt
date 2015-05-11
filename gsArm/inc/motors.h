@@ -21,6 +21,7 @@ void motor_jog(motor_t* m, int32_t v, int32_t t);
 void motor_zero(motor_t* m, int32_t p);
 void motor_setSoftUpperLimit(motor_t* m, int32_t p);
 void motor_setSoftLowerLimit(motor_t* m, int32_t p);
+void motor_stopOnLimit(motor_t* m, uint8_t limit);
 
 void motor_update(motor_t* m, uint8_t limits);
 

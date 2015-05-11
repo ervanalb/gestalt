@@ -76,6 +76,7 @@ static void sendBlankPacket()
 #define SVC_SET_LED 20
 #define SVC_SET_SOFT_LIMITS 21
 #define SVC_GET_LIMITS 22
+#define SVC_STOP_ON_LIMIT 23
 
 static void svcMoveTo()
 {
@@ -218,6 +219,23 @@ static void svcGetLimits()
     gsNode_transmitPacket();
 }
 
+static void svcStopOnLimit()
+{
+    uint8_t xl;
+    uint8_t yl;
+    uint8_t zl;
+
+    xl = gsNode_packet.payload[0];
+    yl = gsNode_packet.payload[1];
+    zl = gsNode_packet.payload[2];
+
+    motor_stopOnLimit(&motor_x, xl);
+    motor_stopOnLimit(&motor_y, yl);
+    motor_stopOnLimit(&motor_z, zl);
+
+    sendBlankPacket();
+}
+
 // Called when a Gestalt packet arrives
 void gsNode_packetReceived()
 {
@@ -269,6 +287,10 @@ void gsNode_packetReceived()
 
        case SVC_GET_LIMITS:
             svcGetLimits();
+            break;
+
+       case SVC_STOP_ON_LIMIT:
+            svcStopOnLimit();
             break;
 
         // Future
