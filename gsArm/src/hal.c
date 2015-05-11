@@ -30,6 +30,15 @@ static uint8_t z_limits;
 
 static int32_t gsTimer;
 
+#define NUM_ADC_CHANNELS 3
+#define ADC_INDEX_HANDLE_AUX1 0
+#define ADC_INDEX_HANDLE_AUX2 1
+#define ADC_INDEX_FORCE_SENSE 2
+
+static uint16_t adc_readings[NUM_ADC_CHANNELS];
+
+static uint16_t z_force_sense_threshold;
+
 void hal_init()
 {
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -38,15 +47,19 @@ void hal_init()
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     I2C_InitTypeDef I2C_InitStruct;
     TIM_OCInitTypeDef TIM_OCInitStruct;
+    DMA_InitTypeDef DMA_InitStruct;
+    ADC_InitTypeDef ADC_InitStruct;
 
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB |
-                          RCC_AHBPeriph_GPIOC | RCC_AHBPeriph_GPIOF, ENABLE);
+                          RCC_AHBPeriph_GPIOC | RCC_AHBPeriph_GPIOF |
+                          RCC_AHBPeriph_DMA1, ENABLE);
 
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14 | RCC_APB1Periph_I2C1 |
                            RCC_APB1Periph_TIM3, ENABLE);
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1 | RCC_APB2Periph_TIM16 |
-                           RCC_APB2Periph_TIM17 | RCC_APB2Periph_USART1, ENABLE);
+                           RCC_APB2Periph_TIM17 | RCC_APB2Periph_USART1 |
+                           RCC_APB2Periph_ADC1, ENABLE);
 
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
@@ -241,6 +254,52 @@ void hal_init()
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_14 | GPIO_Pin_15;
     GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    // Z limit switch
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    // ADC DMA
+    DMA_DeInit(DMA1_Channel1);
+    DMA_InitStruct.DMA_BufferSize = NUM_ADC_CHANNELS;
+    DMA_InitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+    DMA_InitStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+    DMA_InitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+    DMA_InitStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    DMA_InitStruct.DMA_Mode = DMA_Mode_Circular;
+    DMA_InitStruct.DMA_M2M = DMA_M2M_Disable;
+    DMA_InitStruct.DMA_MemoryBaseAddr = (uint32_t)adc_readings;
+    DMA_InitStruct.DMA_DIR = DMA_DIR_PeripheralSRC;
+    DMA_InitStruct.DMA_Priority = DMA_Priority_Low;
+    DMA_InitStruct.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);
+    DMA_Init(DMA1_Channel1, &DMA_InitStruct);
+    DMA_Cmd(DMA1_Channel1, ENABLE);
+
+    // ADC
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AN;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+    GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    ADC_InitStruct.ADC_Resolution = ADC_Resolution_12b;
+    ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;
+    ADC_InitStruct.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+    ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_TRGO;
+    ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Left;
+    ADC_InitStruct.ADC_ScanDirection = ADC_ScanDirection_Upward;
+    ADC_Init(ADC1, &ADC_InitStruct);
+
+    ADC_ChannelConfig(ADC1, ADC_Channel_1, ADC_SampleTime_239_5Cycles);
+    ADC_ChannelConfig(ADC1, ADC_Channel_2, ADC_SampleTime_239_5Cycles);
+    ADC_ChannelConfig(ADC1, ADC_Channel_3, ADC_SampleTime_239_5Cycles);
+
+    ADC_GetCalibrationFactor(ADC1);
+    ADC_Cmd(ADC1, ENABLE);
+    while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_ADRDY));
+
+    ADC_DMACmd(ADC1, ENABLE);
+    ADC_DMARequestModeConfig(ADC1, ADC_DMAMode_Circular);
+
+    ADC_StartOfConversion(ADC1);
 }
 
 void hal_changeX(int32_t deltaX)
@@ -337,10 +396,35 @@ uint8_t hal_rightButton()
     return !(GPIO_ReadInputData(GPIOC) & GPIO_Pin_15);
 }
 
+uint16_t hal_handleRAux1()
+{
+    return adc_readings[ADC_INDEX_HANDLE_AUX1];
+}
+
+uint16_t hal_handleRAux2()
+{
+    return adc_readings[ADC_INDEX_HANDLE_AUX2];
+}
+
+uint16_t hal_zForceSense()
+{
+    return adc_readings[ADC_INDEX_FORCE_SENSE];
+}
+
 void hal_setLED(uint16_t brightness)
 {
     uint16_t pwm = ((uint32_t)CUR_PWM * brightness) >> 16;
     TIM1->CCR1 = pwm;
+}
+
+uint8_t hal_zLimitSwitch()
+{
+    return !(GPIO_ReadInputData(GPIOB) & GPIO_Pin_0);
+}
+
+void hal_setZForceSenseThreshold(uint16_t value)
+{
+    z_force_sense_threshold = value;
 }
 
 // gsNode_hal functions
@@ -458,7 +542,9 @@ static void update_motor_limits()
                ((yp >= yp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
 
     z_limits = ((zp <= zp_soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
-               ((zp >= zp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
+               ((zp >= zp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0) |
+               (hal_zForceSense() > z_force_sense_threshold ? HAL_HARD_LOWER_LIMIT : 0) |
+               (hal_zLimitSwitch() ? HAL_HARD_UPPER_LIMIT : 0);
 }
 
 // Systick handles updating of motors

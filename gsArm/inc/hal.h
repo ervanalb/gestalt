@@ -39,4 +39,10 @@ uint8_t hal_getLimitsX();
 uint8_t hal_getLimitsY();
 uint8_t hal_getLimitsZ();
 
+uint16_t hal_handleRAux1();
+uint16_t hal_handleRAux2();
+uint16_t hal_zForceSense();
+uint8_t hal_zLimitSwitch();
+void hal_setZForceSenseThreshold(uint16_t value);
+
 #endif

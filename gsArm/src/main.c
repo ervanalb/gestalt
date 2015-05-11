@@ -18,16 +18,16 @@ int main()
 
     //i2c_test();
 
-    /*
-    hal_setLED(65535 / 32);
+    //hal_setLED(65535 / 32);
 
-    hal_setXCurrent(65535 / 2);
-    hal_setYCurrent(65535 / 2);
-    hal_setZCurrent(65535 / 2);
-    motor_jog(&motor_x, 65536 * 3200, 65536 / 2);
-    motor_jog(&motor_y, 65536 * 3200, 65536 / 2);
-    motor_jog(&motor_z, 65536 * 3200, 65536 / 2);
-    */
+    //hal_setXCurrent(65535 / 2);
+    //hal_setYCurrent(65535 / 2);
+    //hal_setZCurrent(65535 / 2);
+
+    //motor_setSoftUpperLimit(&motor_x, 65536 * 100);
+    //motor_stopOnLimit(&motor_x, HAL_SOFT_UPPER_LIMIT);
+
+    //motor_jog(&motor_x, 65536 * 1600, 65536);
 
     // Application code here
     for(;;)
@@ -72,11 +72,13 @@ static void sendBlankPacket()
 #define SVC_ZERO 12
 #define SVC_JOG 13
 #define SVC_GET_POSITION 14
-#define SVC_GET_BUTTONS 15
+#define SVC_GET_HANDLES 15
 #define SVC_SET_LED 20
 #define SVC_SET_SOFT_LIMITS 21
 #define SVC_GET_LIMITS 22
 #define SVC_STOP_ON_LIMIT 23
+#define SVC_GET_Z_FORCE_SENSE 24
+#define SVC_SET_Z_FORCE_SENSE_THRESHOLD 25
 
 static void svcMoveTo()
 {
@@ -161,12 +163,20 @@ static void svcSetCurrent()
     sendBlankPacket();
 }
 
-static void svcGetButtons()
+static void svcGetHandles()
 {
+    uint16_t aux1;
+    uint16_t aux2;
+
+    aux1 = hal_handleRAux1();
+    aux2 = hal_handleRAux2();
+
     gsNode_packet.address = gsNode_address;
-    gsNode_packet.length = 2 + 5;
+    gsNode_packet.length = 6 + 5;
     gsNode_packet.payload[0] = hal_leftButton();
     gsNode_packet.payload[1] = hal_rightButton();
+    memcpy(&gsNode_packet.payload[2], &aux1, sizeof(aux1));
+    memcpy(&gsNode_packet.payload[4], &aux2, sizeof(aux2));
 
     gsNode_transmitPacket();
 }
@@ -236,6 +246,29 @@ static void svcStopOnLimit()
     sendBlankPacket();
 }
 
+static void svcGetZForceSense()
+{
+    uint16_t force;
+
+    force = hal_zForceSense();
+
+    gsNode_packet.address = gsNode_address;
+    gsNode_packet.length = 2 + 5;
+    memcpy(&gsNode_packet.payload[0], &force, sizeof(force));
+
+    gsNode_transmitPacket();
+}
+
+static void svcSetZForceSenseThreshold()
+{
+    uint16_t force;
+
+    memcpy(&force, &gsNode_packet.payload[0],  sizeof(force));
+    hal_setZForceSenseThreshold(force);
+
+    sendBlankPacket();
+}
+
 // Called when a Gestalt packet arrives
 void gsNode_packetReceived()
 {
@@ -273,8 +306,8 @@ void gsNode_packetReceived()
             svcGetPosition();
             break;
 
-       case SVC_GET_BUTTONS:
-            svcGetButtons();
+       case SVC_GET_HANDLES:
+            svcGetHandles();
             break;
 
        case SVC_SET_LED:
@@ -291,6 +324,14 @@ void gsNode_packetReceived()
 
        case SVC_STOP_ON_LIMIT:
             svcStopOnLimit();
+            break;
+
+        case SVC_GET_Z_FORCE_SENSE:
+            svcGetZForceSense();
+            break;
+
+        case SVC_SET_Z_FORCE_SENSE_THRESHOLD:
+            svcSetZForceSenseThreshold();
             break;
 
         // Future

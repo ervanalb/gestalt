@@ -6,6 +6,8 @@
 #include "stm32f0xx_misc.h"
 #include "stm32f0xx_tim.h"
 #include "stm32f0xx_i2c.h"
+#include "stm32f0xx_adc.h"
+#include "stm32f0xx_dma.h"
 
 void assert_failed(const char* file, const int line);
 
