@@ -17,13 +17,6 @@ static int32_t xp;
 static int32_t yp;
 static int32_t zp;
 
-static int32_t xp_soft_lower_limit;
-static int32_t xp_soft_upper_limit;
-static int32_t yp_soft_lower_limit;
-static int32_t yp_soft_upper_limit;
-static int32_t zp_soft_lower_limit;
-static int32_t zp_soft_upper_limit;
-
 static uint8_t x_limits;
 static uint8_t y_limits;
 static uint8_t z_limits;
@@ -307,22 +300,16 @@ void hal_init()
 void hal_changeX(int32_t deltaX)
 {
     xp += deltaX >> 11;
-    xp_soft_lower_limit += deltaX;
-    xp_soft_upper_limit += deltaX;
 }
 
 void hal_changeY(int32_t deltaY)
 {
     yp += deltaY >> 11;
-    yp_soft_lower_limit += deltaY;
-    yp_soft_upper_limit += deltaY;
 }
 
 void hal_changeZ(int32_t deltaZ)
 {
     zp += deltaZ >> 11;
-    zp_soft_lower_limit += deltaZ;
-    zp_soft_upper_limit += deltaZ;
 }
 
 void hal_setXCurrent(uint16_t c)
@@ -341,36 +328,6 @@ void hal_setZCurrent(uint16_t c)
 {
     uint16_t pwm = ((uint32_t)CUR_PWM * c) >> 16;
     TIM1->CCR4 = pwm;
-}
-
-void hal_setLowerSoftLimitX(int32_t p)
-{
-    xp_soft_lower_limit = motor_x.p + p;
-}
-
-void hal_setLowerSoftLimitY(int32_t p)
-{
-    yp_soft_lower_limit = motor_y.p + p;
-}
-
-void hal_setLowerSoftLimitZ(int32_t p)
-{
-    zp_soft_lower_limit = motor_z.p + p;
-}
-
-void hal_setUpperSoftLimitX(int32_t p)
-{
-    xp_soft_upper_limit = motor_x.p + p;
-}
-
-void hal_setUpperSoftLimitY(int32_t p)
-{
-    yp_soft_upper_limit = motor_y.p + p;
-}
-
-void hal_setUpperSoftLimitZ(int32_t p)
-{
-    zp_soft_upper_limit = motor_z.p + p;
 }
 
 uint8_t hal_getLimitsX()
@@ -537,14 +494,14 @@ void hal_poll()
 
 static void update_motor_limits()
 {
-    x_limits = ((motor_x.p <= xp_soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
-               ((motor_x.p >= xp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
+    x_limits = ((motor_x.p <= motor_x.soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
+               ((motor_x.p >= motor_x.soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
 
-    y_limits = ((motor_y.p <= yp_soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
-               ((motor_y.p >= yp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
+    y_limits = ((motor_y.p <= motor_y.soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
+               ((motor_y.p >= motor_y.soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0);
 
-    z_limits = ((motor_z.p <= zp_soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
-               ((motor_z.p >= zp_soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0) |
+    z_limits = ((motor_z.p <= motor_z.soft_lower_limit) ? HAL_SOFT_LOWER_LIMIT : 0) |
+               ((motor_z.p >= motor_z.soft_upper_limit) ? HAL_SOFT_UPPER_LIMIT : 0) |
                (hal_zForceSense() > z_force_sense_threshold ? HAL_HARD_LOWER_LIMIT : 0) |
                (hal_zLimitSwitch() ? HAL_HARD_UPPER_LIMIT : 0);
 }

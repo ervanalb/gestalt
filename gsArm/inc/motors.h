@@ -10,6 +10,8 @@ typedef struct motor
     int32_t target_p;
     int32_t v;
     uint8_t stop_on_limit;
+    int32_t soft_upper_limit;
+    int32_t soft_lower_limit;
 } motor_t;
 
 extern motor_t motor_x;

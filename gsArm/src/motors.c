@@ -49,7 +49,10 @@ void motor_zero(motor_t* m, int32_t p)
     if(m == &motor_y) hal_changeY(p - m->p);
     if(m == &motor_z) hal_changeZ(p - m->p);
 
+    m->soft_upper_limit += p - m->p;
+    m->soft_lower_limit += p - m->p;
     m->p = p;
+
     __enable_irq();
 }
 
@@ -57,9 +60,7 @@ void motor_setSoftUpperLimit(motor_t* m, int32_t p)
 {
     __disable_irq();
 
-    if(m == &motor_x) hal_setUpperSoftLimitX(p);
-    if(m == &motor_y) hal_setUpperSoftLimitY(p);
-    if(m == &motor_z) hal_setUpperSoftLimitZ(p);
+    m->soft_upper_limit = m->p + p;
 
    __enable_irq();
 }
@@ -68,9 +69,7 @@ void motor_setSoftLowerLimit(motor_t* m, int32_t p)
 {
     __disable_irq();
 
-    if(m == &motor_x) hal_setLowerSoftLimitX(p);
-    if(m == &motor_y) hal_setLowerSoftLimitY(p);
-    if(m == &motor_z) hal_setLowerSoftLimitZ(p);
+    m->soft_lower_limit = m->p + p;
 
    __enable_irq();
 }

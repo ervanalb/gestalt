@@ -14,14 +14,6 @@ void hal_changeX(int32_t deltaX);
 void hal_changeY(int32_t deltaY);
 void hal_changeZ(int32_t deltaZ);
 
-void hal_setLowerSoftLimitX(int32_t p);
-void hal_setLowerSoftLimitY(int32_t p);
-void hal_setLowerSoftLimitZ(int32_t p);
-
-void hal_setUpperSoftLimitX(int32_t p);
-void hal_setUpperSoftLimitY(int32_t p);
-void hal_setUpperSoftLimitZ(int32_t p);
-
 uint8_t hal_leftButton();
 uint8_t hal_rightButton();
 
