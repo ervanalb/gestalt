@@ -45,7 +45,6 @@ void motor_jog(motor_t* m, int32_t v, int32_t t)
 void motor_zero(motor_t* m, int32_t p)
 {
     __disable_irq();
-    // This is inelegant
     if(m == &motor_x) hal_changeX(p - m->p);
     if(m == &motor_y) hal_changeY(p - m->p);
     if(m == &motor_z) hal_changeZ(p - m->p);
@@ -78,7 +77,7 @@ void motor_setSoftLowerLimit(motor_t* m, int32_t p)
 
 void motor_update(motor_t* m, uint8_t limits)
 {
-    if(m->v >= 0)
+    if(m->v > 0)
     {
         if(HAL_UPPER_LIMITS & limits & m->stop_on_limit)
         {
@@ -94,7 +93,7 @@ void motor_update(motor_t* m, uint8_t limits)
             m->v = 0;
         }
     }
-    else if(m->v <= 0)
+    else if(m->v < 0)
     {
         if(HAL_LOWER_LIMITS & limits & m->stop_on_limit)
         {

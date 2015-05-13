@@ -18,7 +18,7 @@ LIBRARIES =
 
 # Assembler, compiler, and linker flags
 AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m0
-CFLAGS  = $(AFLAGS) -g -O3 $(INC) -std=c99 -Wall
+CFLAGS  = $(AFLAGS) -g -O0 $(INC) -std=c99 -Wall
 CFLAGS += -DUSE_STDPERIPH_DRIVER -DSTM32F031
 CFLAGS += -DDEBUG
 CFLAGS += -ffunction-sections #-fdata-sections

@@ -7,6 +7,8 @@ static const char url[] = "http://www.taktia.com/gestalt/nodes/2B1-021";
 
 void i2c_test();
 
+static int c = 0;
+
 int main()
 {
     // Set up hardware
