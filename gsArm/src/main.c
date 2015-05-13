@@ -16,9 +16,13 @@ int main()
     gsNode_address = 0xCCCC;
     gsNode_init();
 
+    //hal_setLED(65535 / 32);
+
     //i2c_test();
 
-    //hal_setLED(65535 / 32);
+    //hal_setXCurrent(0);
+    //hal_setYCurrent(0);
+    //hal_setXCurrent(0);
 
     //hal_setXCurrent(65535 / 2);
     //hal_setYCurrent(65535 / 2);
@@ -27,7 +31,7 @@ int main()
     //motor_setSoftUpperLimit(&motor_x, 65536 * 100);
     //motor_stopOnLimit(&motor_x, HAL_SOFT_UPPER_LIMIT);
 
-    //motor_jog(&motor_x, 65536 * 1600, 65536);
+    //motor_jog(&motor_z, 65536 * 1600, 65536);
 
     // Application code here
     for(;;)

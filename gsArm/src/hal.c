@@ -103,10 +103,12 @@ void hal_init()
 
     RCC_I2CCLKConfig(RCC_I2C1CLK_HSI);
 
+    //I2C_InitStruct.I2C_Timing = 0x1045061D; // LM75
     I2C_InitStruct.I2C_Timing = 0x50330309; // How's that for magic constants
     I2C_InitStruct.I2C_AnalogFilter = I2C_AnalogFilter_Enable;
     I2C_InitStruct.I2C_DigitalFilter = 0;
     I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
+    //I2C_InitStruct.I2C_Mode = I2C_Mode_SMBusHost;
     I2C_InitStruct.I2C_OwnAddress1 = 0;
     I2C_InitStruct.I2C_Ack = I2C_Ack_Enable;
     I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
@@ -141,8 +143,8 @@ void hal_init()
     TIM_OCInitStruct.TIM_Pulse = 0;
     TIM_OCInitStruct.TIM_OCPolarity = TIM_OCPolarity_Low;
     TIM_OCInitStruct.TIM_OCIdleState = TIM_OCIdleState_Reset;
-    TIM_OCInitStruct.TIM_OCNPolarity = TIM_OCNPolarity_Low;
-    TIM_OCInitStruct.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
+    TIM_OCInitStruct.TIM_OCNPolarity = TIM_OCNPolarity_High;
+    TIM_OCInitStruct.TIM_OCNIdleState = TIM_OCNIdleState_Set;
     TIM_OC1Init(TIM1, &TIM_OCInitStruct);
     TIM_OC2Init(TIM1, &TIM_OCInitStruct);
     TIM_OC3Init(TIM1, &TIM_OCInitStruct);
