@@ -28,9 +28,13 @@ static int32_t gsTimer;
 #define ADC_INDEX_HANDLE_AUX2 1
 #define ADC_INDEX_FORCE_SENSE 2
 
+#define ALPHA 31
+#define DENOM 32
+
 static uint16_t adc_readings[NUM_ADC_CHANNELS];
 
 static uint16_t z_force_sense_threshold;
+static uint32_t z_force_sense_lpf;
 
 void hal_init()
 {
@@ -365,9 +369,14 @@ uint16_t hal_handleRAux2()
     return adc_readings[ADC_INDEX_HANDLE_AUX2];
 }
 
+static void updateZForceSense()
+{
+    z_force_sense_lpf = (adc_readings[ADC_INDEX_FORCE_SENSE] * (DENOM - ALPHA) + z_force_sense_lpf * ALPHA) / DENOM;
+}
+
 uint16_t hal_zForceSense()
 {
-    return adc_readings[ADC_INDEX_FORCE_SENSE];
+    return z_force_sense_lpf;
 }
 
 void hal_setLED(uint16_t brightness)
@@ -511,6 +520,7 @@ void SysTick_Handler()
 {
     if(gsTimer > 0) gsTimer--;
 
+    updateZForceSense();
     update_motor_limits();
 
     motor_update(&motor_x, x_limits);

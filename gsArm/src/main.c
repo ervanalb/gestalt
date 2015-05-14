@@ -7,8 +7,6 @@ static const char url[] = "http://www.taktia.com/gestalt/nodes/2B1-021";
 
 void i2c_test();
 
-static int c = 0;
-
 int main()
 {
     // Set up hardware
@@ -20,8 +18,6 @@ int main()
 
     //hal_setLED(65535 / 32);
 
-    //i2c_test();
-
     //hal_setXCurrent(0);
     //hal_setYCurrent(0);
     //hal_setXCurrent(0);
@@ -29,9 +25,6 @@ int main()
     //hal_setXCurrent(65535 / 2);
     //hal_setYCurrent(65535 / 2);
     //hal_setZCurrent(65535 / 2);
-
-    //motor_setSoftUpperLimit(&motor_x, 65536 * 100);
-    //motor_stopOnLimit(&motor_x, HAL_SOFT_UPPER_LIMIT);
 
     //motor_jog(&motor_z, 65536 * 1600, 65536);
 
@@ -127,10 +120,14 @@ static void svcJog()
 static void svcGetPosition()
 {
     gsNode_packet.address = gsNode_address;
-    gsNode_packet.length = sizeof(int32_t) * 3 + 5;
+    gsNode_packet.length = sizeof(int32_t) * 6 + 5;
     memcpy(&gsNode_packet.payload[0], &motor_x.p, sizeof(int32_t));
     memcpy(&gsNode_packet.payload[4], &motor_y.p, sizeof(int32_t));
     memcpy(&gsNode_packet.payload[8], &motor_z.p, sizeof(int32_t));
+
+    memcpy(&gsNode_packet.payload[12], &motor_x.v, sizeof(int32_t));
+    memcpy(&gsNode_packet.payload[16], &motor_y.v, sizeof(int32_t));
+    memcpy(&gsNode_packet.payload[20], &motor_z.v, sizeof(int32_t));
 
     gsNode_transmitPacket();
 }
